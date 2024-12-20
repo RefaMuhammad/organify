@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'bottom_navbar.dart';
+import 'button.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -27,10 +29,98 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F0E8),
       appBar: _buildAppBar(),
+      drawer: _buildDrawer(),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Bagian "Sebelumnya"
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 16.0,
+                right: 16.0,
+                top: 5.0,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          Chip(
+                            label: Text('Semua',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                )),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            backgroundColor: const Color(0xFF698791),
+                          ),
+                          const SizedBox(width: 12),
+                          Chip(
+                            label: Text('Pribadi',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.black,
+                                )),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            backgroundColor: const Color(0xFFB3C8CF),
+                          ),
+                          const SizedBox(width: 12),
+                          Chip(
+                            label: Text('Kerja',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.black,
+                                )),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            backgroundColor: const Color(0xFFB3C8CF),
+                          ),
+                          const SizedBox(width: 12),
+                          Chip(
+                            label: Text('Ulang Tahun',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.black,
+                                )),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            backgroundColor: const Color(0xFFB3C8CF),
+                          ),
+                          const SizedBox(width: 12),
+                          Chip(
+                            label: Text('Kuliah',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.black,
+                                )),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            backgroundColor: const Color(0xFFB3C8CF),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: Image.asset(
+                      'assets/tombol_tiga_titik.png',
+                      width: 24,
+                      height: 24,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             _buildSection(
               title: 'Sebelumnya',
               isExpanded: _isPreviousExpanded,
@@ -44,7 +134,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildTaskItem('Tugas PAM', '20 Des 2024'),
               ],
             ),
-
             // Bagian "Hari Ini"
             _buildSection(
               title: 'Hari Ini',
@@ -96,7 +185,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-        bottomNavigationBar: _buildBottomNavigationBar(),
+      bottomNavigationBar: BottomNavbar(
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onItemTapped,
+      ),
     );
   }
 
@@ -104,7 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return AppBar(
       backgroundColor: const Color(0xFFF1F0E8),
       centerTitle: true,
-      automaticallyImplyLeading: false,
+      automaticallyImplyLeading: true, // Mengaktifkan tombol menu untuk Drawer
       title: Text(
         'Rabu, 18 Desember',
         style: GoogleFonts.poppins(
@@ -112,12 +204,6 @@ class _HomeScreenState extends State<HomeScreen> {
           fontWeight: FontWeight.bold,
           color: Colors.black,
         ),
-      ),
-      leading: IconButton(
-        onPressed: () {
-          print('Tombol Menu Ditekan');
-        },
-        icon: Image.asset('assets/tombol_menu.png', width: 40, height: 40),
       ),
       actions: [
         IconButton(
@@ -127,6 +213,194 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: Image.asset('assets/tombol_kalender.png', width: 40, height: 40),
         ),
       ],
+    );
+  }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          // Header Drawer
+          DrawerHeader(
+            decoration: const BoxDecoration(color: Color(0xFF222831)),
+            child: Center(
+              child: Text(
+                'Organify',
+                style: GoogleFonts.poppins(
+                  fontSize: 40,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+
+          // Kategori dengan ExpansionTile
+          ExpansionTile(
+            leading: const Icon(Icons.grid_view, color: Colors.black),
+            title: Text('Kategori', style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w400,
+              color: Colors.black,
+            ),),
+            trailing: const Icon(Icons.keyboard_arrow_up, color: Colors.black), // Panah ke atas/bawah
+            children: [
+              ListTile(
+                leading: const Icon(Icons.list_alt, color: Colors.black),
+                title: Text('Semua', style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black,
+                ),),
+                trailing: const Text('5', style: TextStyle(color: Colors.black)),
+                onTap: () {
+                  // Aksi untuk "Semua"
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.person, color: Colors.black),
+                title: Text('Pribadi', style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black,
+                ),),
+                trailing: const Text('2', style: TextStyle(color: Colors.black)),
+                onTap: () {
+                  // Aksi untuk "Pribadi"
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.work, color: Colors.black),
+                title: Text('Kerja', style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black,
+                ),),
+                trailing: const Text('3', style: TextStyle(color: Colors.black)),
+                onTap: () {
+                  // Aksi untuk "Kerja"
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.cake, color: Colors.black),
+                title: Text('Ulang Tahun', style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black,
+                ),),
+                trailing: const Text('3', style: TextStyle(color: Colors.black)),
+                onTap: () {
+                  // Aksi untuk "Ulang Tahun"
+                },
+              ),
+              // Buat Baru
+              ListTile(
+                leading: const Icon(Icons.add, color: Colors.black),
+                title: Text('Buat Baru', style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black,
+                ),),
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      String? newCategory;
+                      bool isInputFilled = false; // Menyimpan status pengisian teks
+
+                      return StatefulBuilder(
+                        builder: (BuildContext context, StateSetter setState) {
+                          return AlertDialog(
+                            title: Text(
+                              'Buat Kategori Baru',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF222831),
+                              ),
+                            ),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextField(
+                                  onChanged: (value) {
+                                    setState(() {
+                                      newCategory = value;
+                                      isInputFilled = newCategory != null &&
+                                          newCategory!.trim().isNotEmpty;
+                                    });
+                                  },
+                                  maxLength: 50, // Batasi maksimal 50 karakter
+                                  decoration: InputDecoration(
+                                    hintText: 'Ketik disini',
+                                    hintStyle: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w300,
+                                      color: Color(0xFF222831),
+                                    ),
+                                    border: const OutlineInputBorder(),
+                                    counterText: '', // Hilangkan teks counter bawaan (opsional)
+                                  ),
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              Opacity(
+                                opacity: isInputFilled ? 1.0 : 0.5,
+                                child: TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // Tutup dialog
+                                  },
+                                  child: Text(
+                                    'Batal',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF222831),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  if (newCategory != null &&
+                                      newCategory!.trim().isNotEmpty) {
+                                    print('Kategori baru: $newCategory');
+                                    // Lakukan aksi dengan kategori baru, misalnya tambah ke daftar
+                                  }
+                                  Navigator.of(context).pop(); // Tutup dialog
+                                },
+                                child: Text(
+                                  'Simpan',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF222831),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+
+          // Masukan
+          ListTile(
+            leading: const Icon(Icons.feedback, color: Colors.black),
+            title: const Text('Masukan'),
+            onTap: () {
+              // Aksi untuk "Masukan"
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -156,8 +430,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         if (isExpanded)
           ListView(
-            shrinkWrap: true, // Untuk menghindari overflow
-            physics: const NeverScrollableScrollPhysics(), // ListView tidak bisa di-scroll secara independen
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             children: tasks,
           ),
       ],
@@ -191,55 +465,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Icon(Icons.calendar_today, size: 16),
                       const SizedBox(width: 4),
-                      Text(deadline, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(
+                        deadline,
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
                     ],
                   ),
                 ],
               ),
             ],
           ),
-          const Icon(Icons.flag),
+          const MyButton(), // Ganti ikon flag dengan popover
         ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return ClipRRect(
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(30),
-        topRight: Radius.circular(30),
-      ),
-      child: BottomNavigationBar(
-        backgroundColor: const Color(0xFFB3C8CF),
-        items: <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Image.asset('assets/button_home.png', width: 50, height: 50),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFF222831),
-                shape: BoxShape.circle,
-              ),
-              child: Image.asset('assets/button_plus.png',
-                  width: 70,
-                  height: 70,
-                  color: Color(0xFFF1F0E8),
-              ),
-            ),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Image.asset('assets/button_user.png', width: 50, height: 50),
-            label: '',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
       ),
     );
   }
