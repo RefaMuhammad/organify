@@ -5,12 +5,14 @@ import 'package:organify/screens/profile_page.dart';
 
 class BottomNavbar extends StatelessWidget {
   final int selectedIndex;
+  final bool isLoggedIn;
   final Function(int) onItemTapped;
 
   const BottomNavbar({
     Key? key,
     required this.selectedIndex,
     required this.onItemTapped,
+    required this.isLoggedIn,
   }) : super(key: key);
 
   void _showBtmSheet(BuildContext context) {
@@ -121,7 +123,6 @@ class BottomNavbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isLoggedIn = false;
     return ClipRRect(
       borderRadius: const BorderRadius.only(
         topLeft: Radius.circular(30),

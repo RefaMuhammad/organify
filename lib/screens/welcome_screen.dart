@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'home.dart';
 
+
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
 
@@ -48,11 +49,16 @@ class WelcomeScreen extends StatelessWidget {
               const SizedBox(height: 65), // Jarak antara teks dan tombol
               ElevatedButton(
                 onPressed: () {
-                  // Navigasi ke HomeScreen
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const HomeScreen(),
+                      builder: (context) => HomeScreen(
+                        isLoggedIn: false, // Contoh nilai
+                        onLogin: () {
+                          // Tindakan ketika login berhasil
+                          print("Login berhasil di HomeScreen");
+                        },
+                      ),
                     ),
                   );
                 },

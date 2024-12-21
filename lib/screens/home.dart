@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:organify/screens/profile_page.dart';
+import 'package:organify/screens/sign_page.dart';
 import 'bottom_navbar.dart';
 import 'button.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  final bool isLoggedIn;
+  final VoidCallback onLogin;
+  const HomeScreen({Key? key, required this.isLoggedIn, required this.onLogin}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -17,6 +21,16 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isUpcomingExpanded = false;
 
   int _selectedIndex = 0;
+
+  late final VoidCallback login;
+
+  get isLoggedIn => widget.isLoggedIn; // Tambahkan variabel ini
+
+  @override
+  void initState() {
+    super.initState();
+    login = widget.onLogin; // Inisialisasi dengan widget.onLogin
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -188,6 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: BottomNavbar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
+        isLoggedIn: isLoggedIn,
       ),
     );
   }
@@ -297,58 +312,71 @@ class _HomeScreenState extends State<HomeScreen> {
               // Buat Baru
               ListTile(
                 leading: const Icon(Icons.add, color: Colors.black),
-                title: Text('Buat Baru', style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),),
+                title: Text(
+                  'Buat Baru',
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black,
+                  ),
+                ),
                 onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      String? newCategory;
-                      bool isInputFilled = false; // Menyimpan status pengisian teks
+                  if (!widget.isLoggedIn) {
+                    // Jika belum login, arahkan ke halaman SignIn
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfilePage(
+                          isLoggedIn: widget.isLoggedIn,
+                        ),
+                      ),
+                    );
+                  } else {
+                    // Jika sudah login, tampilkan dialog untuk membuat kategori baru
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        String? newCategory;
+                        bool isInputFilled = false;
 
-                      return StatefulBuilder(
-                        builder: (BuildContext context, StateSetter setState) {
-                          return AlertDialog(
-                            title: Text(
-                              'Buat Kategori Baru',
-                              style: GoogleFonts.poppins(
+                        return StatefulBuilder(
+                          builder: (BuildContext context, StateSetter setState) {
+                            return AlertDialog(
+                              title: Text(
+                                'Buat Kategori Baru',
+                                style: GoogleFonts.poppins(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF222831),
-                              ),
-                            ),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TextField(
-                                  onChanged: (value) {
-                                    setState(() {
-                                      newCategory = value;
-                                      isInputFilled = newCategory != null &&
-                                          newCategory!.trim().isNotEmpty;
-                                    });
-                                  },
-                                  maxLength: 50, // Batasi maksimal 50 karakter
-                                  decoration: InputDecoration(
-                                    hintText: 'Ketik disini',
-                                    hintStyle: GoogleFonts.poppins(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w300,
-                                      color: Color(0xFF222831),
-                                    ),
-                                    border: const OutlineInputBorder(),
-                                    counterText: '', // Hilangkan teks counter bawaan (opsional)
-                                  ),
+                                  color: const Color(0xFF222831),
                                 ),
-                              ],
-                            ),
-                            actions: [
-                              Opacity(
-                                opacity: isInputFilled ? 1.0 : 0.5,
-                                child: TextButton(
+                              ),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextField(
+                                    onChanged: (value) {
+                                      setState(() {
+                                        newCategory = value;
+                                        isInputFilled = newCategory != null &&
+                                            newCategory!.trim().isNotEmpty;
+                                      });
+                                    },
+                                    maxLength: 50,
+                                    decoration: InputDecoration(
+                                      hintText: 'Ketik disini',
+                                      hintStyle: GoogleFonts.poppins(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w300,
+                                        color: const Color(0xFF222831),
+                                      ),
+                                      border: const OutlineInputBorder(),
+                                      counterText: '',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
                                   onPressed: () {
                                     Navigator.of(context).pop(); // Tutup dialog
                                   },
@@ -357,35 +385,37 @@ class _HomeScreenState extends State<HomeScreen> {
                                     style: GoogleFonts.poppins(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF222831),
+                                      color: const Color(0xFF222831),
                                     ),
                                   ),
                                 ),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  if (newCategory != null &&
-                                      newCategory!.trim().isNotEmpty) {
-                                    print('Kategori baru: $newCategory');
-                                    // Lakukan aksi dengan kategori baru, misalnya tambah ke daftar
+                                TextButton(
+                                  onPressed: isInputFilled
+                                      ? () {
+                                    if (newCategory != null &&
+                                        newCategory!.trim().isNotEmpty) {
+                                      print('Kategori baru: $newCategory');
+                                      // Tambahkan kategori baru ke daftar
+                                    }
+                                    Navigator.of(context).pop(); // Tutup dialog
                                   }
-                                  Navigator.of(context).pop(); // Tutup dialog
-                                },
-                                child: Text(
-                                  'Simpan',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF222831),
+                                      : null, // Disable jika input kosong
+                                  child: Text(
+                                    'Simpan',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF222831),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                  );
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    );
+                  }
                 },
               ),
             ],

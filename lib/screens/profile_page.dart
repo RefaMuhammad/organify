@@ -1,58 +1,95 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'bottom_navbar.dart';
+import 'sign_page.dart';
 
-class ProfilePage extends StatelessWidget {
-  final bool isLoggedIn; // Status login
+class ProfilePage extends StatefulWidget {
+  final bool isLoggedIn;
 
   ProfilePage({required this.isLoggedIn});
 
   @override
+  _ProfilePageState createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  late bool isLoggedIn;
+
+  @override
+  void initState() {
+    super.initState();
+    isLoggedIn = widget.isLoggedIn; // Inisialisasi status login
+  }
+
+  void handleLogin() {
+    if (!isLoggedIn) {
+      // Jika belum login, pindahkan ke halaman SignPage
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SignPage(
+            isLoggedIn: isLoggedIn,
+            onLogin: () {
+              setState(() {
+                isLoggedIn = true; // Perbarui status login
+              });
+            },
+          ),
+        ),
+      );
+    } else {
+      // Jika sudah login, tampilkan widget logged-in
+      setState(() {
+        isLoggedIn = true;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF1F0E8),
+      backgroundColor: const Color(0xFFF1F0E8),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0), // Padding untuk kanan dan kiri
-        child: isLoggedIn ? _buildLoggedInView() : _buildNotLoggedInView(),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: isLoggedIn ? _buildLoggedInView() : _buildNotLoggedInView(context),
       ),
       bottomNavigationBar: BottomNavbar(
-        selectedIndex: 1, // Index halaman Profile
+        selectedIndex: 1,
         onItemTapped: (int index) {
-          // Aksi ketika item di bottom navbar dipilih
           if (index == 0) {
-            Navigator.pushReplacementNamed(context, '/home'); // Navigasi ke Home
+            Navigator.pushReplacementNamed(context, '/home');
           } else if (index == 1) {
             // Tetap di halaman ini
           } else if (index == 2) {
-            Navigator.pushReplacementNamed(context, '/settings'); // Navigasi ke Settings
+            Navigator.pushReplacementNamed(context, '/profile');
           }
         },
+        isLoggedIn: isLoggedIn,
       ),
     );
   }
 
-  // Tampilan untuk pengguna yang sudah login
   Widget _buildLoggedInView() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Foto profil dan nama
           CircleAvatar(
             radius: 50,
-            backgroundImage: AssetImage('assets/profile_image.png'), // Ganti sesuai gambar
+            backgroundImage: AssetImage('assets/profile_image.png'),
           ),
-          SizedBox(height: 10),
-          Text(
+          const SizedBox(height: 10),
+          const Text(
             'Septian Hadi Nugroho',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 20),
-
-          // Ringkasan tugas
-          Text('Ringkasan Tugas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          SizedBox(height: 10),
+          const SizedBox(height: 20),
+          const Text(
+            'Ringkasan Tugas',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -60,20 +97,14 @@ class ProfilePage extends StatelessWidget {
               _buildSummaryCard('4', 'Tugas Tertunda'),
             ],
           ),
-
-          SizedBox(height: 20),
-
-          // Grafik tugas selesai
+          const SizedBox(height: 20),
           _buildSectionTitle('Grafik Tugas Selesai'),
           Container(
             height: 150,
-            color: Colors.grey[300], // Placeholder untuk grafik
-            child: Center(child: Text('Grafik Placeholder')),
+            color: Colors.grey[300],
+            child: const Center(child: Text('Grafik Placeholder')),
           ),
-
-          SizedBox(height: 20),
-
-          // Tugas dalam 7 hari ke depan
+          const SizedBox(height: 20),
           _buildSectionTitle('Tugas dalam 7 Hari Ke Depan'),
           _buildTaskList(),
         ],
@@ -81,109 +112,65 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  // Tampilan untuk pengguna yang belum login
-  Widget _buildNotLoggedInView() {
+  Widget _buildNotLoggedInView(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: 60),
+          const SizedBox(height: 60),
           Row(
             children: [
               InkWell(
-                onTap: () {
-                  // Tambahkan aksi klik di sini, misalnya untuk login
-                },
+                onTap: handleLogin, // Panggil handleLogin saat di-tap
                 child: ClipOval(
                   child: Image.asset(
-                    'assets/default_pp.png', // Path gambar Anda
-                    width: 120,  // Ukuran gambar
-                    height: 120, // Ukuran gambar
-                    fit: BoxFit.cover, // Memastikan gambar terpotong secara proporsional
+                    'assets/default_pp.png',
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Text(
                 'Klik untuk login',
                 style: GoogleFonts.poppins(
-                    color: Color(0xFF222831),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500
+                  color: const Color(0xFF222831),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
-          // Ringkasan tugas
-          Text('Ringkasan Tugas', style: GoogleFonts.poppins(
-              color: Color(0xFF222831),
+          const SizedBox(height: 20),
+          Text(
+            'Ringkasan Tugas',
+            style: GoogleFonts.poppins(
+              color: const Color(0xFF222831),
               fontSize: 16,
-              fontWeight: FontWeight.w600
-          )),
-          SizedBox(height: 10),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _buildSummaryCard('2', 'Tugas Selesai'),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               _buildSummaryCard('4', 'Tugas Tertunda'),
             ],
           ),
-
           SizedBox(height: 10),
-
-          // Grafik tugas selesai
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text('Grafik Tugas Selesai', style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF222831)
-            )),
-          ),
-
-          SizedBox(height: 10),
-
-          // Tugas dalam 7 hari ke depan
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text('Tugas dalam 7 hari ke depan', style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF222831)
-            )),
-          ),
-          SizedBox(height: 10),
-          Center(
-            child: Text('Login untuk fitur yang lebih lengkap', style: GoogleFonts.poppins(
-                color: Color(0xFF222831),
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                decoration: TextDecoration.underline,
-            ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  // Kartu ringkasan tugas
   Widget _buildSummaryCard(String count, String label) {
     return Expanded(
       child: Container(
-        width: double.infinity, // Memastikan lebar penuh
+        width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.grey[300],
@@ -191,26 +178,39 @@ class ProfilePage extends StatelessWidget {
         ),
         child: Column(
           children: [
-            SizedBox(height: 5),
-            Text(count, style: GoogleFonts.poppins(
+            const SizedBox(height: 5),
+            Text(
+              count,
+              style: GoogleFonts.poppins(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF222831)
-            )),
-            SizedBox(height: 15),
-            Text(label, textAlign: TextAlign.center, style: GoogleFonts.poppins(
+                color: const Color(0xFF222831),
+              ),
+            ),
+            const SizedBox(height: 15),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF222831)
-            )),
-            SizedBox(height: 5),
+                color: const Color(0xFF222831),
+              ),
+            ),
+            const SizedBox(height: 5),
           ],
         ),
       ),
     );
   }
 
-  // Daftar tugas dalam 7 hari ke depan
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    );
+  }
+
   Widget _buildTaskList() {
     return Column(
       children: [
@@ -224,17 +224,9 @@ class ProfilePage extends StatelessWidget {
 
   Widget _buildTaskItem(String task, String date) {
     return ListTile(
-      leading: Icon(Icons.calendar_today, color: Colors.grey),
+      leading: const Icon(Icons.calendar_today, color: Colors.grey),
       title: Text(task),
       trailing: Text(date),
-    );
-  }
-
-  // Judul bagian
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
     );
   }
 }
