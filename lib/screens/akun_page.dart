@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:organify/screens/welcome_screen.dart';
 
 class AccountPage extends StatelessWidget {
   // Fungsi untuk menampilkan dialog konfirmasi
@@ -174,13 +175,26 @@ class AccountPage extends StatelessWidget {
             Container(
               width: double.infinity, // Lebar container mengisi layar
               padding: const EdgeInsets.all(16), // Padding di sekitar teks
-              child: Text(
-                'LOGOUT',
-                textAlign: TextAlign.end, // Mengatur alignment teks ke kanan (end)
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFFFF0004),
+              child: GestureDetector(
+                onTap: () {
+                  // Navigasi ke WelcomeScreen
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => WelcomeScreen()),
+                  );
+                },
+                child: Container(
+                  width: double.infinity, // Lebar container mengisi layar
+                  padding: const EdgeInsets.all(16), // Padding di sekitar teks
+                  child: Text(
+                    'LOGOUT',
+                    textAlign: TextAlign.end, // Mengatur alignment teks ke kanan (end)
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFFF0004),
+                    ),
+                  ),
                 ),
               ),
             )
