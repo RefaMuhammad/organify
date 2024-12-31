@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:organify/screens/profile_page.dart';
+import 'package:organify/screens/listTugasSelesai_page.dart';
 import 'package:organify/screens/sign_page.dart';
+import 'package:organify/screens/taskCalender_page.dart';
+import 'package:organify/screens/task_item.dart';
 import 'bottom_navbar.dart';
 import 'button.dart';
 
@@ -24,6 +26,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   late final VoidCallback login;
 
+  bool _showSearchBar = false; // State untuk menampilkan searchbar
+
   get isLoggedIn => widget.isLoggedIn; // Tambahkan variabel ini
 
   @override
@@ -38,6 +42,12 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _toggleSearchBar() {
+    setState(() {
+      _showSearchBar = !_showSearchBar;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,94 +57,8 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.only(
-                left: 16.0,
-                right: 16.0,
-                top: 5.0,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          Chip(
-                            label: Text('Semua',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: Colors.white,
-                                )),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            backgroundColor: const Color(0xFF698791),
-                          ),
-                          const SizedBox(width: 12),
-                          Chip(
-                            label: Text('Pribadi',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: Colors.black,
-                                )),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            backgroundColor: const Color(0xFFB3C8CF),
-                          ),
-                          const SizedBox(width: 12),
-                          Chip(
-                            label: Text('Kerja',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: Colors.black,
-                                )),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            backgroundColor: const Color(0xFFB3C8CF),
-                          ),
-                          const SizedBox(width: 12),
-                          Chip(
-                            label: Text('Ulang Tahun',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: Colors.black,
-                                )),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            backgroundColor: const Color(0xFFB3C8CF),
-                          ),
-                          const SizedBox(width: 12),
-                          Chip(
-                            label: Text('Kuliah',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: Colors.black,
-                                )),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            backgroundColor: const Color(0xFFB3C8CF),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: Image.asset(
-                      'assets/tombol_tiga_titik.png',
-                      width: 24,
-                      height: 24,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Tampilkan searchbar atau Padding dengan Row
+            _showSearchBar ? _buildSearchBar() : _buildChipsRow(),
             _buildSection(
               title: 'Sebelumnya',
               isExpanded: _isPreviousExpanded,
@@ -144,8 +68,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 });
               },
               tasks: [
-                _buildTaskItem('Tugas IMK', '17-12'),
-                _buildTaskItem('Tugas PAM', '20 Des 2024'),
+                const TaskItem(taskName: 'Tugas IMK', deadline: '17-12-2024'),
+                const TaskItem(taskName: 'Tugas PAM', deadline: '20 Des 2024'),
               ],
             ),
             // Bagian "Hari Ini"
@@ -158,8 +82,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 });
               },
               tasks: [
-                _buildTaskItem('Tugas Flutter', '18-12'),
-                _buildTaskItem('Tugas Laravel', '18-12'),
+                const TaskItem(taskName: 'Tugas Flutter', deadline: '18-12'),
+                const TaskItem(taskName: 'Tugas Laravel', deadline: '18-12'),
               ],
             ),
 
@@ -173,8 +97,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 });
               },
               tasks: [
-                _buildTaskItem('Tugas UAS', '25 Des 2024'),
-                _buildTaskItem('Tugas Proposal', '30 Des 2024'),
+                const TaskItem(taskName: 'Tugas UAS', deadline: '25 Des 2024'),
+                const TaskItem(taskName: 'Tugas Proposal', deadline: '30 Des 2024'),
               ],
             ),
 
@@ -183,7 +107,10 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: GestureDetector(
                 onTap: () {
-                  print('Teks periksa semua tugas ditekan');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TugasSelesaiPage()),
+                  );
                 },
                 child: Text(
                   "Periksa semua tugas yang telah selesai",
@@ -207,6 +134,169 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.only(
+        left: 16.0,
+        right: 16.0,
+        top: 5.0,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Color(0xFFD9D9D9), // Warna background searchbar
+          borderRadius: BorderRadius.circular(30), // Bentuk kapsul
+          border: Border.all(
+            color: Color(0xFFD9D9D9), // Warna outline
+            width: 1, // Ketebalan outline
+          ),
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.arrow_back),
+              onPressed: _toggleSearchBar,
+            ),
+            Expanded(
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: "Mencari tugas...",
+                  border: InputBorder.none, // Menghilangkan border default TextField
+                  contentPadding: EdgeInsets.symmetric(vertical: 12), // Padding vertikal
+                  hintStyle: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF222831)
+                  )
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChipsRow() {
+    return Padding(
+      padding: const EdgeInsets.only(
+        left: 16.0,
+        right: 16.0,
+        top: 5.0,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  Chip(
+                    label: Text('Semua',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.white,
+                        )),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    backgroundColor: const Color(0xFF698791),
+                  ),
+                  const SizedBox(width: 12),
+                  Chip(
+                    label: Text('Pribadi',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.black,
+                        )),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    backgroundColor: const Color(0xFFB3C8CF),
+                  ),
+                  const SizedBox(width: 12),
+                  Chip(
+                    label: Text('Kerja',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.black,
+                        )),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    backgroundColor: const Color(0xFFB3C8CF),
+                  ),
+                  const SizedBox(width: 12),
+                  Chip(
+                    label: Text('Ulang Tahun',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.black,
+                        )),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    backgroundColor: const Color(0xFFB3C8CF),
+                  ),
+                  const SizedBox(width: 12),
+                  Chip(
+                    label: Text('Kuliah',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.black,
+                        )),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    backgroundColor: const Color(0xFFB3C8CF),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.zero,
+            child: PopupMenuButton<String>(
+              icon: Image.asset(
+                'assets/tombol_tiga_titik.png',
+                width: 24,
+                height: 24,
+              ),
+              onSelected: (String value) {
+                if (value == 'search') {
+                  _toggleSearchBar();
+                }
+              },
+              itemBuilder: (BuildContext context) {
+                return [
+                  PopupMenuItem(
+                    value: 'search',
+                    child: Container(
+                      padding: EdgeInsets.zero,
+                      alignment: Alignment.center,// Padding di dalam Container diatur ke zero
+                      child: Text(
+                        "Mencari Tugas",
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Color(0xFF222831),
+                        ),
+                      ),
+                    ),
+                  ),
+                ];
+              },
+              color: Color(0xFFF1F0E8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10), // Sudut melengkung
+              ),
+              padding: EdgeInsets.zero, // Padding di luar PopupMenuButton diatur ke zero
+              offset: Offset(0, 40), // Sesuaikan posisi popover jika diperlukan
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: const Color(0xFFF1F0E8),
@@ -223,7 +313,11 @@ class _HomeScreenState extends State<HomeScreen> {
       actions: [
         IconButton(
           onPressed: () {
-            print('Tombol Kalender Ditekan');
+            // Navigasi ke halaman TaskCalendar
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => TaskCalendar()),
+            );
           },
           icon: Image.asset('assets/tombol_kalender.png', width: 40, height: 40),
         ),
@@ -326,8 +420,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ProfilePage(
+                        builder: (context) => SignPage(
                           isLoggedIn: widget.isLoggedIn,
+                          onLogin: () {
+                            setState(() {
+                              widget.onLogin(); // Perbarui status login
+                            });
+                          },
                         ),
                       ),
                     );
@@ -465,49 +564,6 @@ class _HomeScreenState extends State<HomeScreen> {
             children: tasks,
           ),
       ],
-    );
-  }
-
-  Widget _buildTaskItem(String taskName, String deadline) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.circle_outlined, size: 24),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    taskName,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        deadline,
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const MyButton(), // Ganti ikon flag dengan popover
-        ],
-      ),
     );
   }
 }

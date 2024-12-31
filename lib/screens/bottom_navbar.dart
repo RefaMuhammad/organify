@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:organify/screens/profile_page.dart';
+import 'package:organify/screens/sign_page.dart';
+import 'category_button.dart';
+import 'calendar_popup.dart';
 
-
-class BottomNavbar extends StatelessWidget {
+class BottomNavbar extends StatefulWidget {
   final int selectedIndex;
   final bool isLoggedIn;
   final Function(int) onItemTapped;
@@ -15,6 +17,11 @@ class BottomNavbar extends StatelessWidget {
     required this.isLoggedIn,
   }) : super(key: key);
 
+  @override
+  _BottomNavbarState createState() => _BottomNavbarState();
+}
+
+class _BottomNavbarState extends State<BottomNavbar> {
   void _showBtmSheet(BuildContext context) {
     var size = MediaQuery.sizeOf(context);
     showModalBottomSheet(
@@ -36,7 +43,6 @@ class BottomNavbar extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // TextField
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
@@ -55,10 +61,8 @@ class BottomNavbar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Bagian tombol di bawah
                 Row(
                   children: [
-                    // Tombol "Pribadi"
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFFD9D9D9), // Warna putih tombol
@@ -67,23 +71,22 @@ class BottomNavbar extends StatelessWidget {
                         ),
                       ),
                       onPressed: () {},
-                      child: Text(
-                        'Pribadi',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Color(0xFF222831),
-                          fontWeight: FontWeight.w500,
-                        ), // Warna teks hitam
-                      ),
+                      child: const CategoryButton(),
                     ),
                     const SizedBox(width: 10),
-                    // Tombol ikon kalender
                     GestureDetector(
-                      onTap: () {},
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return const CalendarPopup();
+                          },
+                        );
+                      },
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white, // Warna putih ikon
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Image.asset(
@@ -94,18 +97,19 @@ class BottomNavbar extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    // Tombol submit (ikon panah)
                     GestureDetector(
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.of(context).pop();
+                      },
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: const BoxDecoration(
-                          color: Color(0xFF828282), // Warna putih ikon panah
+                          color: Color(0xFF828282),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.arrow_upward,
-                          color: Colors.white, // Ikon panah hitam
+                          color: Colors.white,
                           size: 24,
                         ),
                       ),
@@ -133,7 +137,7 @@ class BottomNavbar extends StatelessWidget {
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: GestureDetector(
-              onTap: () => onItemTapped(0),
+              onTap: () => widget.onItemTapped(0),
               child: Image.asset(
                 'assets/button_home.png',
                 width: 50,
@@ -144,7 +148,25 @@ class BottomNavbar extends StatelessWidget {
           ),
           BottomNavigationBarItem(
             icon: GestureDetector(
-              onTap: () => _showBtmSheet(context),
+              onTap: () {
+                if (!widget.isLoggedIn) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SignPage(
+                        isLoggedIn: widget.isLoggedIn,
+                        onLogin: () {
+                          setState(() {
+                            // Perbarui status login
+                          });
+                        },
+                      ),
+                    ),
+                  );
+                } else {
+                  _showBtmSheet(context);
+                }
+              },
               child: Container(
                 decoration: const BoxDecoration(
                   color: Color(0xFF222831),
@@ -166,7 +188,7 @@ class BottomNavbar extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ProfilePage(isLoggedIn: isLoggedIn),
+                    builder: (context) => ProfilePage(isLoggedIn: widget.isLoggedIn),
                   ),
                 );
               },
@@ -179,8 +201,8 @@ class BottomNavbar extends StatelessWidget {
             label: '',
           ),
         ],
-        currentIndex: selectedIndex,
-        onTap: onItemTapped,
+        currentIndex: widget.selectedIndex,
+        onTap: widget.onItemTapped,
         showSelectedLabels: false,
         showUnselectedLabels: false,
       ),
