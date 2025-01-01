@@ -5,6 +5,7 @@ import 'package:organify/screens/sign_page.dart';
 import 'package:organify/screens/taskCalender_page.dart';
 import 'package:organify/screens/task_item.dart';
 import 'bottom_navbar.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'button.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -46,6 +47,37 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _showSearchBar = !_showSearchBar;
     });
+  }
+
+  Future<void> _launchEmail() async {
+    final Uri mailtoUri = Uri(
+      scheme: 'mailto',
+      path: 'septianworkingemail@gmail.com',
+      queryParameters: {
+        'subject': 'Masukan Aplikasi Organify', // Subjek email
+        'body': 'Tulis feedback Anda di sini...', // Isi email
+      },
+    );
+
+    try {
+      if (await canLaunch(mailtoUri.toString())) {
+        await launch(mailtoUri.toString());
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Tidak dapat membuka aplikasi email.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -519,14 +551,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-
-          // Masukan
+          //Masukan
           ListTile(
             leading: const Icon(Icons.feedback, color: Colors.black),
             title: const Text('Masukan'),
-            onTap: () {
-              // Aksi untuk "Masukan"
-            },
+            onTap: _launchEmail, // Panggil fungsi _launchEmail di sini
           ),
         ],
       ),
