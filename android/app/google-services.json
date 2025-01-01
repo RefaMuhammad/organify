@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "38856081727",
+    "firebase_url": "https://organify4-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "organify4",
+    "storage_bucket": "organify4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:38856081727:android:b4fde2883eb16fa26bd38a",
+        "android_client_info": {
+          "package_name": "com.example.organify"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBE70L4c0r29owFnIzY1hnmO6PC309TkbQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:38856081727:android:d0fb0286b39fd0046bd38a",
+        "android_client_info": {
+          "package_name": "com.organify4.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBE70L4c0r29owFnIzY1hnmO6PC309TkbQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

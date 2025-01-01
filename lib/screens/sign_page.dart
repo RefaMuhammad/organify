@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:organify/screens/home.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignPage extends StatefulWidget {
   final bool isLoggedIn;
-  final VoidCallback onLogin; // tambahkan ini
+  final VoidCallback onLogin;
 
   const SignPage({
     Key? key,
     required this.isLoggedIn,
-    required this.onLogin, // tambahkan ini
+    required this.onLogin,
   }) : super(key: key);
 
   @override
@@ -41,16 +43,22 @@ class _SignPageState extends State<SignPage> {
           child: !isLoggedIn
               ? SignInWidget(
             onSwitch: toggleSignInSignUp,
-            onLoginSuccess: (bool success) {
+            onLoginSuccess: (bool success) async {
               if (success) {
-                widget.onLogin();// panggil fungsi login dari MyApp
+                widget.onLogin();
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => HomeScreen(isLoggedIn: true, onLogin: () {
-                      print("Callback onLogin dipanggil");
-                      },
+                    builder: (context) => HomeScreen(
+                      isLoggedIn: true,
+                      onLogin: widget.onLogin,
                     ),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Login gagal. Silakan periksa email atau password."),
                   ),
                 );
               }
@@ -63,7 +71,7 @@ class _SignPageState extends State<SignPage> {
   }
 }
 
-class SignInWidget extends StatelessWidget {
+class SignInWidget extends StatefulWidget {
   final VoidCallback onSwitch;
   final Function(bool) onLoginSuccess;
 
@@ -72,6 +80,43 @@ class SignInWidget extends StatelessWidget {
     required this.onSwitch,
     required this.onLoginSuccess,
   }) : super(key: key);
+
+  @override
+  _SignInWidgetState createState() => _SignInWidgetState();
+}
+
+class _SignInWidgetState extends State<SignInWidget> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  bool _isLoading = false;
+
+  Future<void> _login(BuildContext context) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      User? user = userCredential.user;
+
+      if (user != null) {
+        widget.onLoginSuccess(true);
+      }
+    } catch (e) {
+      widget.onLoginSuccess(false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login gagal: ${e.toString()}')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +167,7 @@ class SignInWidget extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: GestureDetector(
-                    onTap: onSwitch,
+                    onTap: widget.onSwitch,
                     child: Container(
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F0E8),
@@ -147,6 +192,7 @@ class SignInWidget extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           TextField(
+            controller: emailController,
             decoration: InputDecoration(
               filled: true,
               fillColor: const Color(0xFFF4F4F4),
@@ -164,6 +210,7 @@ class SignInWidget extends StatelessWidget {
           ),
           const SizedBox(height: 15),
           TextField(
+            controller: passwordController,
             obscureText: true,
             decoration: InputDecoration(
               filled: true,
@@ -182,7 +229,9 @@ class SignInWidget extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           GestureDetector(
-            onTap: () => onLoginSuccess(true),
+            onTap: () async {
+              await _login(context);
+            },
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
@@ -191,7 +240,9 @@ class SignInWidget extends StatelessWidget {
               ),
               padding: const EdgeInsets.symmetric(vertical: 15),
               child: Center(
-                child: Text(
+                child: _isLoading
+                    ? CircularProgressIndicator(color: Colors.white)
+                    : Text(
                   'Login',
                   style: GoogleFonts.poppins(
                     color: Color(0xFFF1F0E8),
@@ -208,10 +259,69 @@ class SignInWidget extends StatelessWidget {
   }
 }
 
-class SignUpWidget extends StatelessWidget {
+class SignUpWidget extends StatefulWidget {
   final VoidCallback onSwitch;
 
   const SignUpWidget({Key? key, required this.onSwitch}) : super(key: key);
+
+  @override
+  _SignUpWidgetState createState() => _SignUpWidgetState();
+}
+
+class _SignUpWidgetState extends State<SignUpWidget> {
+  final TextEditingController _fullnameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+
+  Future<void> signUpUser() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final fullname = _fullnameController.text.trim();
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+
+      if (fullname.isEmpty || email.isEmpty || password.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Semua field harus diisi!')),
+        );
+        return;
+      }
+
+      // Buat akun di Firebase Authentication
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      User? user = userCredential.user;
+      await user?.sendEmailVerification();
+
+      // Simpan hanya fullname ke Firestore
+      await FirebaseFirestore.instance.collection('login').doc(user!.uid).set({
+        'fullname': fullname, // Hanya menyimpan fullname
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Akun berhasil dibuat! Silakan cek email Anda untuk verifikasi.'),
+        ),
+      );
+
+      widget.onSwitch();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal membuat akun: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -242,7 +352,7 @@ class SignUpWidget extends StatelessWidget {
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: onSwitch,
+                    onTap: widget.onSwitch,
                     child: Container(
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F0E8),
@@ -289,6 +399,7 @@ class SignUpWidget extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           TextField(
+            controller: _fullnameController,
             decoration: InputDecoration(
               filled: true,
               fillColor: const Color(0xFFF4F4F4),
@@ -306,6 +417,7 @@ class SignUpWidget extends StatelessWidget {
           ),
           const SizedBox(height: 15),
           TextField(
+            controller: _emailController,
             decoration: InputDecoration(
               filled: true,
               fillColor: const Color(0xFFF4F4F4),
@@ -323,6 +435,7 @@ class SignUpWidget extends StatelessWidget {
           ),
           const SizedBox(height: 15),
           TextField(
+            controller: _passwordController,
             obscureText: true,
             decoration: InputDecoration(
               filled: true,
@@ -341,7 +454,7 @@ class SignUpWidget extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           GestureDetector(
-            onTap: onSwitch,
+            onTap: signUpUser,
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
@@ -350,7 +463,9 @@ class SignUpWidget extends StatelessWidget {
               ),
               padding: const EdgeInsets.symmetric(vertical: 15),
               child: Center(
-                child: Text(
+                child: _isLoading
+                    ? CircularProgressIndicator(color: Colors.white)
+                    : Text(
                   'Sign Up',
                   style: GoogleFonts.poppins(
                     color: Color(0xFFF1F0E8),

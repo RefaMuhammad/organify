@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:organify/screens/akun_page.dart';
 import 'package:organify/screens/grafik_batang.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'bottom_navbar.dart';
 import 'sign_page.dart';
 
@@ -16,11 +18,30 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   late bool isLoggedIn;
+  late String fullname = '';
 
   @override
   void initState() {
     super.initState();
     isLoggedIn = widget.isLoggedIn; // Inisialisasi status login
+    _getFullName();
+  }
+
+  Future<void> _getFullName() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      String uid = user.uid;
+      DocumentSnapshot snapshot = await FirebaseFirestore.instance
+          .collection('login')
+          .doc(uid)
+          .get();
+
+      if (snapshot.exists) {
+        setState(() {
+          fullname = snapshot['fullname'] ?? 'No name available';
+        });
+      }
+    }
   }
 
   void handleLogin() {
@@ -105,7 +126,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   );
                 },
                 child: Text(
-                  'Septian Hadi Nugroho',
+                  fullname.isNotEmpty ? fullname : 'Loading...',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
