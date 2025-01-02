@@ -47,24 +47,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void handleLogin() {
     if (!isLoggedIn) {
       // Jika belum login, pindahkan ke halaman SignPage
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SignPage(
-            isLoggedIn: isLoggedIn,
-            onLogin: () {
-              setState(() {
-                isLoggedIn = true; // Perbarui status login
-              });
-            },
-          ),
-        ),
-      );
-    } else {
-      // Jika sudah login, tampilkan widget logged-in
-      setState(() {
-        isLoggedIn = true;
-      });
+      Navigator.pushReplacementNamed(context, '/signpage');
     }
   }
 

@@ -161,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: BottomNavbar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
-        isLoggedIn: isLoggedIn,
+        isLoggedIn: widget.isLoggedIn, // Gunakan widget.isLoggedIn
       ),
     );
   }
@@ -449,19 +449,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () {
                   if (!widget.isLoggedIn) {
                     // Jika belum login, arahkan ke halaman SignIn
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SignPage(
-                          isLoggedIn: widget.isLoggedIn,
-                          onLogin: () {
-                            setState(() {
-                              widget.onLogin(); // Perbarui status login
-                            });
-                          },
-                        ),
-                      ),
-                    );
+                    Navigator.pushReplacementNamed(context, '/signpage');
                   } else {
                     // Jika sudah login, tampilkan dialog untuk membuat kategori baru
                     showDialog(

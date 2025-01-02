@@ -31,6 +31,7 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _checkFirstLaunch();
+    _checkLoginStatus(); // Tambahkan ini untuk memeriksa status login saat aplikasi dimulai
   }
 
   Future<void> _checkFirstLaunch() async {
@@ -46,13 +47,28 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  void login() {
+  Future<void> _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final loggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+    setState(() {
+      isLoggedIn = loggedIn;
+    });
+  }
+
+  void login() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', true);
+
     setState(() {
       isLoggedIn = true;
     });
   }
 
-  void logout() {
+  void logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', false);
+
     setState(() {
       isLoggedIn = false;
     });
@@ -66,9 +82,9 @@ class _MyAppState extends State<MyApp> {
       initialRoute: _determineInitialRoute(),
       routes: {
         '/welcome': (context) => WelcomeScreen(),
-        '/home': (context) => HomeScreen(isLoggedIn: isLoggedIn, onLogin: logout,),
+        '/home': (context) => HomeScreen(isLoggedIn: isLoggedIn, onLogin: logout),
         '/profile': (context) => ProfilePage(isLoggedIn: isLoggedIn),
-        '/signpage': (context) => SignPage(isLoggedIn: isLoggedIn, onLogin: logout,),
+        '/signpage': (context) => SignPage(isLoggedIn: isLoggedIn, onLogin: login),
       },
     );
   }
