@@ -6,7 +6,12 @@ import 'package:organify/screens/taskCalender_page.dart';
 import 'package:organify/screens/task_item.dart';
 import 'bottom_navbar.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'button.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import '../services/api_service.dart';
+import '../models/kategori.dart';
+import '../models/catatan.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isLoggedIn;
@@ -18,23 +23,38 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // State untuk masing-masing bagian
   bool _isPreviousExpanded = false;
   bool _isTodayExpanded = false;
   bool _isUpcomingExpanded = false;
-
   int _selectedIndex = 0;
-
   late final VoidCallback login;
+  bool _showSearchBar = false;
+  String searchQuery = '';
+  Future<List<Kategori>>? futureKategori;
+  final ApiService apiService = ApiService();
+  Future<List<Catatan>>? futureTugas;
+  String? selectedKategori;
+  String? uid;
 
-  bool _showSearchBar = false; // State untuk menampilkan searchbar
-
-  get isLoggedIn => widget.isLoggedIn; // Tambahkan variabel ini
+  get isLoggedIn => widget.isLoggedIn;
 
   @override
   void initState() {
     super.initState();
-    login = widget.onLogin; // Inisialisasi dengan widget.onLogin
+    initializeDateFormatting('id_ID', null);
+    login = widget.onLogin;
+    fetchUID();
+    if (uid != null) {
+      futureKategori = apiService.fetchKategori(uid!);
+      futureTugas = apiService.fetchCatatan(uid!);
+    }
+  }
+
+  void fetchUID() {
+    User? user = FirebaseAuth.instance.currentUser;
+    setState(() {
+      uid = user?.uid;
+    });
   }
 
   void _onItemTapped(int index) {
@@ -49,13 +69,51 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Map<String, List<Catatan>> _filterTugas(List<Catatan> tugas) {
+    DateTime now = DateTime.now();
+    DateTime today = DateTime(now.year, now.month, now.day);
+    DateTime tomorrow = today.add(const Duration(days: 1));
+
+    List<Catatan> sebelumnya = [];
+    List<Catatan> hariIni = [];
+    List<Catatan> yangAkanDatang = [];
+
+    for (var tugasItem in tugas) {
+      if (!tugasItem.status) {
+        if ((selectedKategori == null || selectedKategori == 'Semua' || tugasItem.kategori == selectedKategori) &&
+            tugasItem.namaList.toLowerCase().contains(searchQuery.toLowerCase())) {
+          DateTime deadline = tugasItem.tanggalDeadline;
+          if (deadline.isBefore(today)) {
+            sebelumnya.add(tugasItem);
+          } else if (deadline.isAtSameMomentAs(today)) {
+            hariIni.add(tugasItem);
+          } else if (deadline.isAfter(today)) {
+            yangAkanDatang.add(tugasItem);
+          }
+        }
+      }
+    }
+
+    return {
+      'sebelumnya': sebelumnya,
+      'hariIni': hariIni,
+      'yangAkanDatang': yangAkanDatang,
+    };
+  }
+
+  void _onKategoriSelected(String? kategori) {
+    setState(() {
+      selectedKategori = kategori;
+    });
+  }
+
   Future<void> _launchEmail() async {
     final Uri mailtoUri = Uri(
       scheme: 'mailto',
       path: 'septianworkingemail@gmail.com',
       queryParameters: {
-        'subject': 'Masukan Aplikasi Organify', // Subjek email
-        'body': 'Tulis feedback Anda di sini...', // Isi email
+        'subject': 'Masukan Aplikasi Organify',
+        'body': 'Tulis feedback Anda di sini...',
       },
     );
 
@@ -82,6 +140,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    DateTime now = DateTime.now();
+    String formattedDate = DateFormat('EEEE, d MMMM', 'id_ID').format(now);
     return Scaffold(
       backgroundColor: const Color(0xFFF1F0E8),
       appBar: _buildAppBar(),
@@ -89,52 +149,76 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Tampilkan searchbar atau Padding dengan Row
             _showSearchBar ? _buildSearchBar() : _buildChipsRow(),
-            _buildSection(
-              title: 'Sebelumnya',
-              isExpanded: _isPreviousExpanded,
-              onTap: () {
-                setState(() {
-                  _isPreviousExpanded = !_isPreviousExpanded;
-                });
+            FutureBuilder<List<Catatan>>(
+              future: futureTugas,
+              builder: (context, snapshot) {
+                if (futureTugas == null) {
+                  return Center(child: Text('UID tidak tersedia'));
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('Tidak ada tugas'));
+                } else {
+                  Map<String, List<Catatan>> filteredTugas = _filterTugas(snapshot.data!);
+                  return Column(
+                    children: [
+                      _buildSection(
+                        title: 'Sebelumnya',
+                        isExpanded: _isPreviousExpanded,
+                        onTap: () {
+                          setState(() {
+                            _isPreviousExpanded = !_isPreviousExpanded;
+                          });
+                        },
+                        tasks: filteredTugas['sebelumnya']!
+                            .map((tugas) => TaskItem(
+                          id: tugas.id,
+                          taskName: tugas.namaList,
+                          deadline: DateFormat('dd-MM-yyyy').format(tugas.tanggalDeadline),
+                        ))
+                            .toList(),
+                      ),
+                      _buildSection(
+                        title: 'Hari Ini',
+                        isExpanded: _isTodayExpanded,
+                        onTap: () {
+                          setState(() {
+                            _isTodayExpanded = !_isTodayExpanded;
+                          });
+                        },
+                        tasks: filteredTugas['hariIni']!
+                            .map((tugas) => TaskItem(
+                          id: tugas.id,
+                          taskName: tugas.namaList,
+                          deadline: DateFormat('dd-MM-yyyy').format(tugas.tanggalDeadline),
+                        ))
+                            .toList(),
+                      ),
+                      _buildSection(
+                        title: 'Yang Akan Datang',
+                        isExpanded: _isUpcomingExpanded,
+                        onTap: () {
+                          setState(() {
+                            _isUpcomingExpanded = !_isUpcomingExpanded;
+                          });
+                        },
+                        tasks: filteredTugas['yangAkanDatang']!
+                            .map((tugas) => TaskItem(
+                          id: tugas.id,
+                          taskName: tugas.namaList,
+                          deadline: DateFormat('dd-MM-yyyy').format(tugas.tanggalDeadline),
+                        ))
+                            .toList(),
+                      ),
+                    ],
+                  );
+                }
               },
-              tasks: [
-                const TaskItem(taskName: 'Tugas IMK', deadline: '17-12-2024'),
-                const TaskItem(taskName: 'Tugas PAM', deadline: '20 Des 2024'),
-              ],
             ),
-            // Bagian "Hari Ini"
-            _buildSection(
-              title: 'Hari Ini',
-              isExpanded: _isTodayExpanded,
-              onTap: () {
-                setState(() {
-                  _isTodayExpanded = !_isTodayExpanded;
-                });
-              },
-              tasks: [
-                const TaskItem(taskName: 'Tugas Flutter', deadline: '18-12'),
-                const TaskItem(taskName: 'Tugas Laravel', deadline: '18-12'),
-              ],
-            ),
-
-            // Bagian "Yang Akan Datang"
-            _buildSection(
-              title: 'Yang Akan Datang',
-              isExpanded: _isUpcomingExpanded,
-              onTap: () {
-                setState(() {
-                  _isUpcomingExpanded = !_isUpcomingExpanded;
-                });
-              },
-              tasks: [
-                const TaskItem(taskName: 'Tugas UAS', deadline: '25 Des 2024'),
-                const TaskItem(taskName: 'Tugas Proposal', deadline: '30 Des 2024'),
-              ],
-            ),
-
-            // Tambahkan teks di bagian akhir
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: GestureDetector(
@@ -175,11 +259,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: Color(0xFFD9D9D9), // Warna background searchbar
-          borderRadius: BorderRadius.circular(30), // Bentuk kapsul
+          color: Color(0xFFD9D9D9),
+          borderRadius: BorderRadius.circular(30),
           border: Border.all(
-            color: Color(0xFFD9D9D9), // Warna outline
-            width: 1, // Ketebalan outline
+            color: Color(0xFFD9D9D9),
+            width: 1,
           ),
         ),
         child: Row(
@@ -192,13 +276,18 @@ class _HomeScreenState extends State<HomeScreen> {
               child: TextField(
                 decoration: InputDecoration(
                   hintText: "Mencari tugas...",
-                  border: InputBorder.none, // Menghilangkan border default TextField
-                  contentPadding: EdgeInsets.symmetric(vertical: 12), // Padding vertikal
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
                   hintStyle: GoogleFonts.poppins(
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF222831)
-                  )
+                    color: Color(0xFF222831),
+                  ),
                 ),
+                onChanged: (value) {
+                  setState(() {
+                    searchQuery = value;
+                  });
+                },
               ),
             ),
           ],
@@ -220,109 +309,101 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  Chip(
-                    label: Text('Semua',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.white,
-                        )),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    backgroundColor: const Color(0xFF698791),
-                  ),
-                  const SizedBox(width: 12),
-                  Chip(
-                    label: Text('Pribadi',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.black,
-                        )),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    backgroundColor: const Color(0xFFB3C8CF),
-                  ),
-                  const SizedBox(width: 12),
-                  Chip(
-                    label: Text('Kerja',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.black,
-                        )),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    backgroundColor: const Color(0xFFB3C8CF),
-                  ),
-                  const SizedBox(width: 12),
-                  Chip(
-                    label: Text('Ulang Tahun',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.black,
-                        )),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    backgroundColor: const Color(0xFFB3C8CF),
-                  ),
-                  const SizedBox(width: 12),
-                  Chip(
-                    label: Text('Kuliah',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.black,
-                        )),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    backgroundColor: const Color(0xFFB3C8CF),
-                  ),
-                ],
+              child: FutureBuilder<List<Kategori>>(
+                future: futureKategori,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return Text('Tidak ada kategori');
+                  } else {
+                    List<Kategori> kategoriList = snapshot.data!;
+                    return Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => _onKategoriSelected('Semua'),
+                          child: Chip(
+                            label: Text('Semua',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                )),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            backgroundColor: selectedKategori == 'Semua'
+                                ? const Color(0xFF698791)
+                                : const Color(0xFFB3C8CF),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ...kategoriList.map((kategori) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: GestureDetector(
+                              onTap: () => _onKategoriSelected(kategori.kategori),
+                              child: Chip(
+                                label: Text(kategori.kategori,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      color: selectedKategori == kategori.kategori
+                                          ? Colors.white
+                                          : Colors.black,
+                                    )),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                backgroundColor: selectedKategori == kategori.kategori
+                                    ? const Color(0xFF698791)
+                                    : const Color(0xFFB3C8CF),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                    );
+                  }
+                },
               ),
             ),
           ),
-          Padding(
-            padding: EdgeInsets.zero,
-            child: PopupMenuButton<String>(
-              icon: Image.asset(
-                'assets/tombol_tiga_titik.png',
-                width: 24,
-                height: 24,
-              ),
-              onSelected: (String value) {
-                if (value == 'search') {
-                  _toggleSearchBar();
-                }
-              },
-              itemBuilder: (BuildContext context) {
-                return [
-                  PopupMenuItem(
-                    value: 'search',
-                    child: Container(
-                      padding: EdgeInsets.zero,
-                      alignment: Alignment.center,// Padding di dalam Container diatur ke zero
-                      child: Text(
-                        "Mencari Tugas",
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Color(0xFF222831),
-                        ),
+          PopupMenuButton<String>(
+            icon: Image.asset(
+              'assets/tombol_tiga_titik.png',
+              width: 24,
+              height: 24,
+            ),
+            onSelected: (String value) {
+              if (value == 'search') {
+                _toggleSearchBar();
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return [
+                PopupMenuItem(
+                  value: 'search',
+                  child: Container(
+                    padding: EdgeInsets.zero,
+                    alignment: Alignment.center,
+                    child: Text(
+                      "Mencari Tugas",
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: Color(0xFF222831),
                       ),
                     ),
                   ),
-                ];
-              },
-              color: Color(0xFFF1F0E8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10), // Sudut melengkung
-              ),
-              padding: EdgeInsets.zero, // Padding di luar PopupMenuButton diatur ke zero
-              offset: Offset(0, 40), // Sesuaikan posisi popover jika diperlukan
+                ),
+              ];
+            },
+            color: Color(0xFFF1F0E8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
+            padding: EdgeInsets.zero,
+            offset: Offset(0, 40),
           ),
         ],
       ),
@@ -330,12 +411,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
+    DateTime now = DateTime.now();
+    String formattedDate = DateFormat('EEEE, d MMMM', 'id_ID').format(now);
+
     return AppBar(
       backgroundColor: const Color(0xFFF1F0E8),
       centerTitle: true,
-      automaticallyImplyLeading: true, // Mengaktifkan tombol menu untuk Drawer
+      automaticallyImplyLeading: true,
       title: Text(
-        'Rabu, 18 Desember',
+        formattedDate,
         style: GoogleFonts.poppins(
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -345,7 +429,6 @@ class _HomeScreenState extends State<HomeScreen> {
       actions: [
         IconButton(
           onPressed: () {
-            // Navigasi ke halaman TaskCalendar
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => TaskCalendar()),
@@ -362,7 +445,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // Header Drawer
           DrawerHeader(
             decoration: const BoxDecoration(color: Color(0xFF222831)),
             child: Center(
@@ -376,66 +458,69 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-
-          // Kategori dengan ExpansionTile
           ExpansionTile(
             leading: const Icon(Icons.grid_view, color: Colors.black),
-            title: Text('Kategori', style: GoogleFonts.poppins(
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
-              color: Colors.black,
-            ),),
-            trailing: const Icon(Icons.keyboard_arrow_up, color: Colors.black), // Panah ke atas/bawah
+            title: Text(
+              'Kategori',
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w400,
+                color: Colors.black,
+              ),
+            ),
+            trailing: const Icon(Icons.keyboard_arrow_up, color: Colors.black),
             children: [
               ListTile(
                 leading: const Icon(Icons.list_alt, color: Colors.black),
-                title: Text('Semua', style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),),
+                title: Text(
+                  'Semua',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black,
+                  ),
+                ),
                 trailing: const Text('5', style: TextStyle(color: Colors.black)),
                 onTap: () {
-                  // Aksi untuk "Semua"
+                  _onKategoriSelected('Semua');
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.person, color: Colors.black),
-                title: Text('Pribadi', style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),),
-                trailing: const Text('2', style: TextStyle(color: Colors.black)),
-                onTap: () {
-                  // Aksi untuk "Pribadi"
+              FutureBuilder<List<Kategori>>(
+                future: futureKategori,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return Text('Tidak ada kategori');
+                  } else {
+                    List<Kategori> kategoriList = snapshot.data!;
+                    return Column(
+                      children: kategoriList.map((kategori) {
+                        return ListTile(
+                          leading: const Icon(Icons.category, color: Colors.black),
+                          title: Text(
+                            kategori.kategori,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.black,
+                            ),
+                          ),
+                          trailing: Text(
+                            '${kategori.jumlahCatatan}',
+                            style: TextStyle(color: Colors.black),
+                          ),
+                          onTap: () {
+                            _onKategoriSelected(kategori.kategori);
+                          },
+                        );
+                      }).toList(),
+                    );
+                  }
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.work, color: Colors.black),
-                title: Text('Kerja', style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),),
-                trailing: const Text('3', style: TextStyle(color: Colors.black)),
-                onTap: () {
-                  // Aksi untuk "Kerja"
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.cake, color: Colors.black),
-                title: Text('Ulang Tahun', style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),),
-                trailing: const Text('3', style: TextStyle(color: Colors.black)),
-                onTap: () {
-                  // Aksi untuk "Ulang Tahun"
-                },
-              ),
-              // Buat Baru
               ListTile(
                 leading: const Icon(Icons.add, color: Colors.black),
                 title: Text(
@@ -448,7 +533,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 onTap: () {
                   if (!widget.isLoggedIn) {
-                    // Jika belum login, arahkan ke halaman SignIn
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -456,14 +540,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           isLoggedIn: widget.isLoggedIn,
                           onLogin: () {
                             setState(() {
-                              widget.onLogin(); // Perbarui status login
+                              widget.onLogin();
                             });
                           },
                         ),
                       ),
                     );
                   } else {
-                    // Jika sudah login, tampilkan dialog untuk membuat kategori baru
                     showDialog(
                       context: context,
                       builder: (BuildContext context) {
@@ -488,8 +571,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     onChanged: (value) {
                                       setState(() {
                                         newCategory = value;
-                                        isInputFilled = newCategory != null &&
-                                            newCategory!.trim().isNotEmpty;
+                                        isInputFilled = newCategory != null && newCategory!.trim().isNotEmpty;
                                       });
                                     },
                                     maxLength: 50,
@@ -509,7 +591,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               actions: [
                                 TextButton(
                                   onPressed: () {
-                                    Navigator.of(context).pop(); // Tutup dialog
+                                    Navigator.of(context).pop();
                                   },
                                   child: Text(
                                     'Batal',
@@ -522,15 +604,31 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 TextButton(
                                   onPressed: isInputFilled
-                                      ? () {
-                                    if (newCategory != null &&
-                                        newCategory!.trim().isNotEmpty) {
-                                      print('Kategori baru: $newCategory');
-                                      // Tambahkan kategori baru ke daftar
+                                      ? () async {
+                                    if (newCategory != null && newCategory!.trim().isNotEmpty) {
+                                      try {
+                                        await ApiService().createKategori(uid!, newCategory!);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Kategori berhasil ditambahkan'),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                        Navigator.of(context).pop();
+                                        setState(() {
+                                          futureKategori = ApiService().fetchKategori(uid!);
+                                        });
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Gagal menambahkan kategori: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
                                     }
-                                    Navigator.of(context).pop(); // Tutup dialog
                                   }
-                                      : null, // Disable jika input kosong
+                                      : null,
                                   child: Text(
                                     'Simpan',
                                     style: GoogleFonts.poppins(
@@ -551,11 +649,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          //Masukan
           ListTile(
             leading: const Icon(Icons.feedback, color: Colors.black),
             title: const Text('Masukan'),
-            onTap: _launchEmail, // Panggil fungsi _launchEmail di sini
+            onTap: _launchEmail,
           ),
         ],
       ),

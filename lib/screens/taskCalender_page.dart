@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/api_service.dart'; // Impor ApiService
+import '../models/catatan.dart'; // Impor model Catatan
 
 class Task {
   final String title;
@@ -20,25 +23,54 @@ class _TaskCalendarState extends State<TaskCalendar> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-  // Data dummy untuk tugas
-  Map<DateTime, List<Task>> tasks = {
-    DateTime(2024, 12, 5): [Task(title: 'Tugas Mk 1', date: DateTime(2024, 12, 5))],
-    DateTime(2024, 12, 15): [Task(title: 'Tugas Mk 2', date: DateTime(2024, 12, 15))],
-    DateTime(2024, 12, 20): [
-      Task(title: 'Tugas Mk 3', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 4', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 5', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 6', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 7', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 8', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 9', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 10', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 11', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 12', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 13', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 14', date: DateTime(2024, 12, 20)),
-    ],
-  };
+  // Data tugas dari database
+  Map<DateTime, List<Task>> tasks = {};
+  final ApiService apiService = ApiService(); // Buat instance ApiService
+  String? uid; // Tambahkan variabel untuk menyimpan UID
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUID(); // Ambil UID saat widget diinisialisasi
+  }
+
+  // Fungsi untuk mengambil UID
+  void _fetchUID() {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        uid = user.uid;
+      });
+      _fetchTasks(); // Ambil data tugas setelah UID tersedia
+    }
+  }
+
+  // Fungsi untuk mengambil data tugas dari database
+  Future<void> _fetchTasks() async {
+    if (uid == null) return; // Pastikan UID tersedia
+
+    try {
+      List<Catatan> catatanList = await apiService.fetchCatatan(uid!); // Sertakan UID
+
+      // Konversi data Catatan ke format Task
+      Map<DateTime, List<Task>> newTasks = {};
+      for (var catatan in catatanList) {
+        DateTime date = DateTime(catatan.tanggalDeadline.year, catatan.tanggalDeadline.month, catatan.tanggalDeadline.day);
+        if (newTasks[date] == null) {
+          newTasks[date] = [];
+        }
+        newTasks[date]!.add(Task(title: catatan.namaList, date: catatan.tanggalDeadline));
+      }
+
+      setState(() {
+        tasks = newTasks;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memuat data tugas: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

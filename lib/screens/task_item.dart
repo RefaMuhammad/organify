@@ -3,11 +3,13 @@ import 'package:organify/screens/edittask_page.dart';
 import 'button.dart';
 
 class TaskItem extends StatelessWidget {
+  final String id; // Tambahkan parameter id
   final String taskName;
   final String deadline;
 
   const TaskItem({
     Key? key,
+    required this.id, // Wajib diisi
     required this.taskName,
     required this.deadline,
   }) : super(key: key);
@@ -20,6 +22,7 @@ class TaskItem extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => EditTaskPage(
+              id: id, // Sertakan id saat navigasi
               taskName: taskName,
               deadline: deadline,
             ),

@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'bottom_navbar.dart';
 import 'sign_page.dart';
+import '../services/api_service.dart';
 
 class ProfilePage extends StatefulWidget {
   final bool isLoggedIn;
@@ -19,12 +20,32 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   late bool isLoggedIn;
   late String fullname = '';
+  int tugasSelesai = 0;
+  int tugasTertunda = 0;
+  final ApiService apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
-    isLoggedIn = widget.isLoggedIn; // Inisialisasi status login
+    isLoggedIn = widget.isLoggedIn;
     _getFullName();
+    fetchAndCountTasks();
+  }
+
+  Future<void> fetchAndCountTasks() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        String uid = user.uid;
+        Map<String, int> counts = await apiService.countTasks(uid);
+        setState(() {
+          tugasSelesai = counts['tugasSelesai'] ?? 0;
+          tugasTertunda = counts['tugasTertunda'] ?? 0;
+        });
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
   }
 
   Future<void> _getFullName() async {
@@ -46,7 +67,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void handleLogin() {
     if (!isLoggedIn) {
-      // Jika belum login, pindahkan ke halaman SignPage
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -54,14 +74,13 @@ class _ProfilePageState extends State<ProfilePage> {
             isLoggedIn: isLoggedIn,
             onLogin: () {
               setState(() {
-                isLoggedIn = true; // Perbarui status login
+                isLoggedIn = true;
               });
             },
           ),
         ),
       );
     } else {
-      // Jika sudah login, tampilkan widget logged-in
       setState(() {
         isLoggedIn = true;
       });
@@ -101,10 +120,8 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: 60),
           Row(
             children: [
-              // Gambar (CircleAvatar) yang bisa diklik
               GestureDetector(
                 onTap: () {
-                  // Navigasi ke halaman akun
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => AccountPage()),
@@ -116,10 +133,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               const SizedBox(width: 15),
-              // Teks yang bisa diklik
               GestureDetector(
                 onTap: () {
-                  // Navigasi ke halaman akun
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => AccountPage()),
@@ -138,20 +153,19 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: 5),
           Container(
-            padding: const EdgeInsets.all(16), // Padding di sekitar teks
+            padding: const EdgeInsets.all(16),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, // Mengatur alignment column ke start
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Ringkasan Tugas',
-                  textAlign: TextAlign.start, // Mengatur alignment teks ke start (kiri)
+                  textAlign: TextAlign.start,
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF222831),
                   ),
                 ),
-                // Widget lainnya
               ],
             ),
           ),
@@ -159,26 +173,24 @@ class _ProfilePageState extends State<ProfilePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildSummaryCard('2', 'Tugas Selesai'),
+              _buildSummaryCard(tugasSelesai.toString(), 'Tugas Selesai'),
               const SizedBox(width: 16),
-              _buildSummaryCard('4', 'Tugas Tertunda'),
+              _buildSummaryCard(tugasTertunda.toString(), 'Tugas Tertunda'),
             ],
           ),
           const SizedBox(height: 20),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16), // Padding di sekitar container
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[300], // Warna latar belakang container
-              borderRadius: BorderRadius.circular(10), // Ujung container melengkung
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, // Mengatur alignment column ke start
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Teks "Grafik Tugas Selesai"
                 Row(
                   children: [
-                    // Teks "Grafik Tugas Selesai"
                     Expanded(
                       child: Text(
                         'Grafik Tugas Selesai',
@@ -189,15 +201,12 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                     ),
-                    // Panah Kiri (Arrow Left)
                     IconButton(
-                      icon: Icon(Icons.arrow_left), // Ikon panah kiri
+                      icon: Icon(Icons.arrow_left),
                       onPressed: () {
-                        // Aksi ketika panah kiri diklik
                         print('Panah kiri diklik');
                       },
                     ),
-                    // Tanggal (16/12 - 22/12)
                     Text(
                       '16/12 - 22/12',
                       style: GoogleFonts.poppins(
@@ -206,23 +215,19 @@ class _ProfilePageState extends State<ProfilePage> {
                         color: Color(0xFF222831),
                       ),
                     ),
-                    // Panah Kanan (Arrow Right)
                     IconButton(
-                      icon: Icon(Icons.arrow_right), // Ikon panah kanan
+                      icon: Icon(Icons.arrow_right),
                       onPressed: () {
-                        // Aksi ketika panah kanan diklik
                         print('Panah kanan diklik');
                       },
                     ),
                   ],
                 ),
-                SizedBox(height: 10), // Jarak antara tanggal dan grafik
-                // Grafik Batang
-                GrafikBatang(), // Memanggil grafik batang dari file terpisah
-                SizedBox(height: 10), // Jarak antara grafik dan hari
-                // Daftar Hari
+                SizedBox(height: 10),
+                GrafikBatang(),
+                SizedBox(height: 10),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween, // Menyebarkan hari secara merata
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('Senin', style: TextStyle(fontSize: 12)),
                     Text('Selasa', style: TextStyle(fontSize: 12)),
@@ -239,16 +244,16 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: 20),
           Container(
             decoration: BoxDecoration(
-              color: Colors.grey[300], // Warna latar belakang abu-abu
-              borderRadius: BorderRadius.circular(12), // Ujung container melengkung
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(12),
             ),
-            padding: const EdgeInsets.all(16), // Padding di dalam container
+            padding: const EdgeInsets.all(16),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, // Mengatur alignment column ke start
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSectionTitle('Tugas dalam 7 Hari Ke Depan'), // Judul section
-                SizedBox(height: 10), // Jarak antara judul dan daftar tugas
-                _buildTaskList(), // Daftar tugas
+                _buildSectionTitle('Tugas dalam 7 Hari Ke Depan'),
+                SizedBox(height: 10),
+                _buildTaskList(),
               ],
             ),
           )
@@ -267,7 +272,7 @@ class _ProfilePageState extends State<ProfilePage> {
           Row(
             children: [
               InkWell(
-                onTap: handleLogin, // Panggil handleLogin saat di-tap
+                onTap: handleLogin,
                 child: ClipOval(
                   child: Image.asset(
                     'assets/default_pp.png',
@@ -301,21 +306,21 @@ class _ProfilePageState extends State<ProfilePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildSummaryCard('2', 'Tugas Selesai'),
+              _buildSummaryCard('0', 'Tugas Selesai'),
               const SizedBox(width: 16),
-              _buildSummaryCard('4', 'Tugas Tertunda'),
+              _buildSummaryCard('0', 'Tugas Tertunda'),
             ],
           ),
           SizedBox(height: 10),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16), // Padding di dalam container
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[300], // Warna latar belakang container
-              borderRadius: BorderRadius.circular(10), // Ujung container melengkung
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween, // Menempatkan teks dan tombol di ujung yang berlawanan
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Grafik Tugas Selesai',
@@ -331,13 +336,13 @@ class _ProfilePageState extends State<ProfilePage> {
           SizedBox(height: 10),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16), // Padding di dalam container
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[300], // Warna latar belakang container
-              borderRadius: BorderRadius.circular(10), // Ujung container melengkung
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween, // Menempatkan teks dan tombol di ujung yang berlawanan
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Tugas dalam 7 Hari ke Depan',
@@ -352,18 +357,18 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           SizedBox(height: 1),
           Container(
-            width: double.infinity, // Lebar container mengisi layar
-            padding: const EdgeInsets.all(16), // Padding di sekitar teks
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
             child: GestureDetector(
-              onTap: handleLogin, // Panggil fungsi handleLogin ketika teks diklik
+              onTap: handleLogin,
               child: Text(
                 "Login untuk fitur yang lebih lengkap",
-                textAlign: TextAlign.center, // Mengatur alignment teks ke tengah
+                textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w500,
                   fontSize: 10,
-                  decoration: TextDecoration.underline, // Menambahkan garis bawah
-                  color: Color(0xFF222831), // Warna teks (opsional)
+                  decoration: TextDecoration.underline,
+                  color: Color(0xFF222831),
                 ),
               ),
             ),
@@ -422,32 +427,56 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildTaskList() {
-    return Column(
-      children: [
-        _buildTaskItem('Tugas Prak. MBD', '20-12'),
-        _buildTaskItem('Tugas Proyek IMK', '20-12'),
-        _buildTaskItem('Tugas PAM', '21-12'),
-        _buildTaskItem('Tugas PAW', '22-12'),
-      ],
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return Center(child: Text('User belum login'));
+    }
+
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: apiService.fetchCatatan7HariKeDepan(user.uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(child: Text('Tidak ada tugas dalam 7 hari ke depan'));
+        } else {
+          List<Map<String, dynamic>> catatanList = snapshot.data!;
+          return Column(
+            children: catatanList.map((catatan) {
+              return _buildTaskItem(
+                catatan['namaList'],
+                _formatDate(catatan['tanggalDeadline']),
+              );
+            }).toList(),
+          );
+        }
+      },
     );
+  }
+
+  String _formatDate(String date) {
+    DateTime parsedDate = DateTime.parse(date);
+    return '${parsedDate.day}-${parsedDate.month}';
   }
 
   Widget _buildTaskItem(String task, String date) {
     return ListTile(
       leading: Image.asset(
-        'assets/button_kalender.png', // Path ke gambar
-        width: 24, // Lebar gambar
-        height: 24, // Tinggi gambar
+        'assets/button_kalender.png',
+        width: 24,
+        height: 24,
       ),
       title: Text(task, style: GoogleFonts.poppins(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        color: Color(0xFF222831)
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF222831)
       )),
       trailing: Text(date, style: GoogleFonts.poppins(
-        fontWeight: FontWeight.w500,
-        fontSize: 8,
-        color: Color(0xFF000000)
+          fontWeight: FontWeight.w500,
+          fontSize: 8,
+          color: Color(0xFF000000)
       )),
     );
   }

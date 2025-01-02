@@ -4,20 +4,27 @@ import 'package:google_fonts/google_fonts.dart';
 import 'category_menu.dart';
 
 class CategoryButton extends StatefulWidget {
-  final bool isEditPage; // Tambahkan flag untuk halaman edit
-  const CategoryButton({super.key, this.isEditPage = false}); // Default false
+  final Function(String) onCategorySelected; // Callback untuk mengupdate kategori
+  final bool isEditPage; // Flag untuk halaman edit
+
+  const CategoryButton({
+    super.key,
+    required this.onCategorySelected,
+    this.isEditPage = false, // Default false
+  });
 
   @override
   State<CategoryButton> createState() => _CategoryButtonState();
 }
 
 class _CategoryButtonState extends State<CategoryButton> {
-  String selectedCategory = 'Pribadi'; // Kategori default
+  String selectedCategory = 'kategori'; // Kategori default
 
   void updateCategory(String category) {
     setState(() {
       selectedCategory = category;
     });
+    widget.onCategorySelected(category); // Panggil callback untuk mengupdate kategori
   }
 
   @override
@@ -36,12 +43,12 @@ class _CategoryButtonState extends State<CategoryButton> {
       ),
       child: Container(
         padding: widget.isEditPage
-            ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2) // Halaman edit
-            : const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Default
+            ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2) // Padding untuk halaman edit
+            : const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Padding default
         decoration: BoxDecoration(
           color: widget.isEditPage
-              ? const Color(0xFFB3C8CF) // Halaman edit
-              : const Color(0xFFD9D9D9), // Default warna abu-abu muda
+              ? const Color(0xFFB3C8CF) // Warna untuk halaman edit
+              : const Color(0xFFD9D9D9), // Warna default (abu-abu muda)
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -50,7 +57,7 @@ class _CategoryButtonState extends State<CategoryButton> {
             Text(
               selectedCategory,
               style: GoogleFonts.poppins(
-                fontSize: widget.isEditPage ? 12 : 12, // Font lebih besar di edit
+                fontSize: widget.isEditPage ? 12 : 12, // Ukuran font
                 fontWeight: FontWeight.w500,
                 color: const Color(0xFF222831),
               ),

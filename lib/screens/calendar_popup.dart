@@ -72,7 +72,7 @@ class _CalendarPopupState extends State<CalendarPopup> {
                   _selectedDate = selectedDay;
                 });
               },
-              headerVisible: false, // Sembunyikan header default
+              headerVisible: false,
               calendarStyle: CalendarStyle(
                 todayDecoration: BoxDecoration(
                   color: Colors.grey.shade300,
@@ -173,8 +173,7 @@ class _CalendarPopupState extends State<CalendarPopup> {
                 ),
                 TextButton(
                   onPressed: () {
-                    print('Tanggal dipilih: $_selectedDate');
-                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(_selectedDate);
                   },
                   child: Text(
                     'SELESAI',

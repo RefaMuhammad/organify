@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:organify/screens/category_button.dart';
 import 'package:organify/screens/edit_catatan.dart'; // Sesuaikan dengan path file Anda
+import '../services/api_service.dart'; // Impor ApiService
 
 class EditTaskPage extends StatefulWidget {
+  final String id; // ID catatan
   final String taskName;
   final String deadline;
 
   const EditTaskPage({
     Key? key,
+    required this.id,
     required this.taskName,
     required this.deadline,
   }) : super(key: key);
@@ -20,6 +23,49 @@ class EditTaskPage extends StatefulWidget {
 class _EditTaskPageState extends State<EditTaskPage> {
   String? _judul; // Variabel untuk menyimpan judul
   String? _catatan; // Variabel untuk menyimpan catatan
+  String _selectedCategory = 'kategori'; // Variabel untuk menyimpan kategori yang dipilih
+  final ApiService apiService = ApiService(); // Buat instance ApiService
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTodoItem(); // Memuat catatan saat halaman dibuka
+  }
+
+  // Fungsi untuk memuat catatan
+  Future<void> _loadTodoItem() async {
+    try {
+      final message = await apiService.getTodoItem(widget.id);
+      setState(() {
+        _catatan = message; // Simpan catatan ke state
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memuat catatan: $e')),
+      );
+    }
+  }
+
+  // Fungsi untuk menyimpan perubahan
+  Future<void> _simpanPerubahan() async {
+    if (_judul != null && _judul!.isNotEmpty && _catatan != null && _catatan!.isNotEmpty) {
+      try {
+        await apiService.tambahTodoItem(widget.id, _judul!, _catatan!);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Catatan berhasil disimpan')),
+        );
+        Navigator.pop(context); // Kembali ke halaman sebelumnya setelah menyimpan
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menyimpan catatan: $e')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Judul dan catatan tidak boleh kosong')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,19 +80,26 @@ class _EditTaskPageState extends State<EditTaskPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFB3C8CF),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB3C8CF),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              onPressed: () {},
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CategoryButton(
+                    isEditPage: true,
+                    onCategorySelected: (String category) {
+                      setState(() {
+                        _selectedCategory = category; // Update nilai _selectedCategory
+                      });
+                    },
                   ),
-                ),
-                onPressed: () {},
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CategoryButton(isEditPage: true),
-                  ],
-                ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
             Text(
@@ -126,7 +179,6 @@ class _EditTaskPageState extends State<EditTaskPage> {
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-
                       ],
                     ),
                   ],
@@ -139,11 +191,14 @@ class _EditTaskPageState extends State<EditTaskPage> {
                       MaterialPageRoute(builder: (context) => EditCatatanPage()),
                     );
 
+                    // Debugging: Cetak hasil yang dikembalikan
+                    print('Hasil dari EditCatatanPage: $result');
+
                     // Jika ada hasil (catatan), simpan dan perbarui tampilan
                     if (result != null) {
                       setState(() {
-                        _judul = result['judul'];
-                        _catatan = result['catatan'];
+                        _judul = result['judul']; // Simpan nilai judul
+                        _catatan = result['catatan']; // Simpan nilai catatan
                       });
                     }
                   },
@@ -158,8 +213,9 @@ class _EditTaskPageState extends State<EditTaskPage> {
                 ),
               ],
             ),
+            Text(widget.id),
             // Tampilkan judul jika ada
-            if (_judul != null)
+            if (_judul != null && _judul!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
@@ -172,7 +228,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
                 ),
               ),
             // Tampilkan catatan jika ada
-            if (_catatan != null)
+            if (_catatan != null && _catatan!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
@@ -193,41 +249,28 @@ class _EditTaskPageState extends State<EditTaskPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.pop(context); // Kembali ke halaman sebelumnya
+                  },
                   child: Text(
-                    'HAPUS',
+                    'BATAL',
                     style: GoogleFonts.poppins(
-                      color: Colors.red,
+                      color: const Color(0x694E6167),
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
                     ),
                   ),
                 ),
-                Row(
-                  children: [
-                    TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        'BATAL',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0x694E6167),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
-                      ),
+                TextButton(
+                  onPressed: _simpanPerubahan, // Simpan perubahan
+                  child: Text(
+                    'SELESAI',
+                    style: GoogleFonts.poppins(
+                      color: const Color(0xFF4E6167),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
                     ),
-                    TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        'SELESAI',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFF4E6167),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),

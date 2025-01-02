@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:organify/screens/profile_page.dart';
 import 'package:organify/screens/sign_page.dart';
+import '../services/api_service.dart';
 import 'category_button.dart';
 import 'calendar_popup.dart';
 
@@ -22,12 +24,40 @@ class BottomNavbar extends StatefulWidget {
 }
 
 class _BottomNavbarState extends State<BottomNavbar> {
+  String _kategori = '';
+  String _namaList = '';
+  DateTime _tanggalDeadline = DateTime.now();
+  String _selectedCategory = 'kategori'; // Default value
+  String? uid; // Tambahkan variabel untuk menyimpan UID
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUID(); // Ambil UID saat widget diinisialisasi
+  }
+
+  // Fungsi untuk mengambil UID
+  void _fetchUID() {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        uid = user.uid;
+      });
+    }
+  }
+
+  void _updateSelectedCategory(String category) {
+    setState(() {
+      _selectedCategory = category;
+    });
+  }
+
   void _showBtmSheet(BuildContext context) {
     var size = MediaQuery.sizeOf(context);
     showModalBottomSheet(
       isScrollControlled: true,
       context: context,
-      backgroundColor: Colors.white, // Latar belakang BottomSheet
+      backgroundColor: Colors.white,
       builder: (context) {
         return Padding(
           padding: EdgeInsets.only(
@@ -38,50 +68,70 @@ class _BottomNavbarState extends State<BottomNavbar> {
           ),
           child: Container(
             decoration: const BoxDecoration(
-              color: Colors.white, // Warna putih penuh untuk Container
+              color: Colors.white,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Color(0xFFD9D9D9), // Warna putih untuk TextField
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Buat tugas baru disini',
-                      hintStyle: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      border: InputBorder.none,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Color(0xFFD9D9D9),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Buat tugas baru disini',
+                        hintStyle: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        border: InputBorder.none,
+                        counterText: '', // Sembunyikan counter default
+                      ),
+                      maxLength: 25, // Batasi input menjadi 25 karakter
+                      onChanged: (value) {
+                        setState(() {
+                          _namaList = value;
+                        });
+                      },
+                    )
                 ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFD9D9D9), // Warna putih tombol
+                        backgroundColor: Color(0xFFD9D9D9),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
                       ),
-                      onPressed: () {},
-                      child: const CategoryButton(),
+                      onPressed: () {
+                        // Anda bisa menambahkan logika untuk memilih kategori di sini
+                      },
+                      child: CategoryButton(
+                        onCategorySelected: (String category) {
+                          setState(() {
+                            _kategori = category; // Update nilai _kategori
+                          });
+                        },
+                      ),
                     ),
                     const SizedBox(width: 10),
                     GestureDetector(
-                      onTap: () {
-                        showDialog(
+                      onTap: () async {
+                        final selectedDate = await showDialog<DateTime>(
                           context: context,
                           builder: (BuildContext context) {
                             return const CalendarPopup();
                           },
                         );
+                        if (selectedDate != null) {
+                          setState(() {
+                            _tanggalDeadline = selectedDate;
+                          });
+                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.all(8),
@@ -98,8 +148,26 @@ class _BottomNavbarState extends State<BottomNavbar> {
                     ),
                     const Spacer(),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).pop();
+                      onTap: () async {
+                        if (_namaList.isNotEmpty && _kategori.isNotEmpty && uid != null) {
+                          try {
+                            await ApiService().createCatatan(
+                              uid!, // Sertakan UID
+                              _kategori,
+                              _namaList,
+                              _tanggalDeadline as String,
+                              false, // Status default (misalnya, false untuk tugas belum selesai)
+                            );
+                            Navigator.of(context).pop();
+                            // Tambahkan logika untuk memperbarui UI atau menampilkan pesan sukses
+                          } catch (e) {
+                            // Tambahkan logika untuk menangani error
+                            print('Error: $e');
+                          }
+                        } else {
+                          // Tampilkan pesan error jika input tidak lengkap
+                          print('Kategori, Nama List, dan UID harus diisi');
+                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.all(16),
