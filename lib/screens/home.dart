@@ -1,12 +1,15 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:organify/controllers/catatan.dart';
+import 'package:organify/models/catatan.dart';
 import 'package:organify/screens/listTugasSelesai_page.dart';
-import 'package:organify/screens/sign_page.dart';
 import 'package:organify/screens/taskCalender_page.dart';
 import 'package:organify/screens/task_item.dart';
 import 'bottom_navbar.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'button.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isLoggedIn;
@@ -26,6 +29,12 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
   late final VoidCallback login;
+  final CatatanController _catatanController = CatatanController();
+  Map<String, List<Catatan>> filteredCatatans = {
+    'sebelumnya': [],
+    'hariIni': [],
+    'yangAkanDatang': [],
+  };
 
   bool _showSearchBar = false; // State untuk menampilkan searchbar
 
@@ -35,6 +44,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     login = widget.onLogin; // Inisialisasi dengan widget.onLogin
+    initializeDateFormatting('id_ID', null).then((_) {
+      // Setelah inisialisasi selesai, perbarui state jika diperlukan
+      setState(() {});
+    });
+    fetchData(); // Panggil fetchData saat initState
+  }
+
+  String formatTanggalRealtime(DateTime date) {
+    final DateFormat formatter = DateFormat('EEEE, d MMMM', 'id_ID'); // Format: Hari, Tanggal Bulan
+    return formatter.format(date);
   }
 
   void _onItemTapped(int index) {
@@ -80,6 +99,20 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> fetchData() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final data = await _catatanController.getFilteredCatatans(user.uid);
+        setState(() {
+          filteredCatatans = data;
+        });
+      } catch (e) {
+        print('Error fetching catatans: $e');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,12 +132,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   _isPreviousExpanded = !_isPreviousExpanded;
                 });
               },
-              tasks: [
-                const TaskItem(taskName: 'Tugas IMK', deadline: '17-12-2024'),
-                const TaskItem(taskName: 'Tugas PAM', deadline: '20 Des 2024'),
-              ],
+              tasks: filteredCatatans['sebelumnya']!.map((catatan) {
+                return TaskItem(
+                  taskName: catatan.namaList,
+                  deadline: DateFormat('dd-MM-yyyy').format(DateTime.parse(catatan.tanggalDeadline)),
+                );
+              }).toList(),
             ),
-            // Bagian "Hari Ini"
             _buildSection(
               title: 'Hari Ini',
               isExpanded: _isTodayExpanded,
@@ -113,13 +147,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   _isTodayExpanded = !_isTodayExpanded;
                 });
               },
-              tasks: [
-                const TaskItem(taskName: 'Tugas Flutter', deadline: '18-12'),
-                const TaskItem(taskName: 'Tugas Laravel', deadline: '18-12'),
-              ],
+              tasks: filteredCatatans['hariIni']!.map((catatan) {
+                return TaskItem(
+                  taskName: catatan.namaList,
+                  deadline: DateFormat('dd-MM').format(DateTime.parse(catatan.tanggalDeadline)),
+                );
+              }).toList(),
             ),
-
-            // Bagian "Yang Akan Datang"
             _buildSection(
               title: 'Yang Akan Datang',
               isExpanded: _isUpcomingExpanded,
@@ -128,13 +162,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   _isUpcomingExpanded = !_isUpcomingExpanded;
                 });
               },
-              tasks: [
-                const TaskItem(taskName: 'Tugas UAS', deadline: '25 Des 2024'),
-                const TaskItem(taskName: 'Tugas Proposal', deadline: '30 Des 2024'),
-              ],
+              tasks: filteredCatatans['yangAkanDatang']!.map((catatan) {
+                return TaskItem(
+                  taskName: catatan.namaList,
+                  deadline: DateFormat('dd MMM yyyy').format(DateTime.parse(catatan.tanggalDeadline)),
+                );
+              }).toList(),
             ),
-
-            // Tambahkan teks di bagian akhir
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: GestureDetector(
@@ -191,13 +225,13 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: TextField(
                 decoration: InputDecoration(
-                  hintText: "Mencari tugas...",
-                  border: InputBorder.none, // Menghilangkan border default TextField
-                  contentPadding: EdgeInsets.symmetric(vertical: 12), // Padding vertikal
-                  hintStyle: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF222831)
-                  )
+                    hintText: "Mencari tugas...",
+                    border: InputBorder.none, // Menghilangkan border default TextField
+                    contentPadding: EdgeInsets.symmetric(vertical: 12), // Padding vertikal
+                    hintStyle: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF222831)
+                    )
                 ),
               ),
             ),
@@ -335,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
       centerTitle: true,
       automaticallyImplyLeading: true, // Mengaktifkan tombol menu untuk Drawer
       title: Text(
-        'Rabu, 18 Desember',
+        formatTanggalRealtime(DateTime.now()), // Tanggal real-time
         style: GoogleFonts.poppins(
           fontSize: 20,
           fontWeight: FontWeight.bold,
