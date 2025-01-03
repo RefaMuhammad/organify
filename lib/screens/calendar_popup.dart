@@ -177,8 +177,14 @@ class _CalendarPopupState extends State<CalendarPopup> {
                 ),
                 TextButton(
                   onPressed: () {
-                    print('Tanggal dipilih(popup): ${_selectedDate.toIso8601String()}'); // Debugging
-                    widget.onDateSelected?.call(_selectedDate); // Panggil callback
+                    // Ambil hanya tanggal tanpa waktu
+                    DateTime selectedDateWithoutTime = DateTime(
+                      _selectedDate.year,
+                      _selectedDate.month,
+                      _selectedDate.day,
+                    );
+                    print('Tanggal dipilih (tanpa waktu): $selectedDateWithoutTime'); // Debugging
+                    widget.onDateSelected?.call(selectedDateWithoutTime); // Kirim tanggal tanpa waktu
                     Navigator.of(context).pop();
                   },
                   child: Text(

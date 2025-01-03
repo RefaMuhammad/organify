@@ -79,7 +79,12 @@ class CatatanController {
 
   // Method untuk memfilter catatan berdasarkan tanggalDeadline
   Future<Map<String, List<Catatan>>> getFilteredCatatans(String uid) async {
+    // Ambil semua catatan
     List<Catatan> catatans = await getCatatans(uid);
+
+    // Filter catatan yang statusnya false (belum selesai)
+    List<Catatan> unfinishedCatatans = catatans.where((catatan) => catatan.status == false).toList();
+
     DateTime now = DateTime.now();
     DateTime todayStart = DateTime(now.year, now.month, now.day); // Mulai hari ini (00:00:00)
     DateTime todayEnd = todayStart.add(Duration(days: 1)); // Akhir hari ini (23:59:59)
@@ -88,7 +93,8 @@ class CatatanController {
     List<Catatan> hariIni = [];
     List<Catatan> yangAkanDatang = [];
 
-    for (var catatan in catatans) {
+    // Kelompokkan catatan yang belum selesai berdasarkan tanggal deadline
+    for (var catatan in unfinishedCatatans) {
       DateTime deadline = DateTime.parse(catatan.tanggalDeadline);
       if (deadline.isBefore(todayStart)) {
         sebelumnya.add(catatan);
