@@ -64,14 +64,20 @@ class _AppEntryPointState extends State<AppEntryPoint> {
 
       setState(() {
         isFirstLaunch = !hasLaunchedBefore;
-        isLoggedIn = firebaseUser != null || sharedPrefLoggedIn;
+
+        // Pastikan hanya pengguna dengan email yang sudah diverifikasi yang bisa login
+        if (firebaseUser != null && firebaseUser.emailVerified) {
+          isLoggedIn = sharedPrefLoggedIn || true;
+        } else {
+          isLoggedIn = false;
+        }
       });
 
       if (!hasLaunchedBefore) {
         await prefs.setBool('hasLaunchedBefore', true);
       }
 
-      if (firebaseUser != null && !sharedPrefLoggedIn) {
+      if (firebaseUser != null && firebaseUser.emailVerified && !sharedPrefLoggedIn) {
         await prefs.setBool('isLoggedIn', true);
       }
     } catch (e) {

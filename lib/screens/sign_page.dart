@@ -97,6 +97,7 @@ class _SignInWidgetState extends State<SignInWidget> {
     });
 
     try {
+      // Proses login
       UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
@@ -105,16 +106,38 @@ class _SignInWidgetState extends State<SignInWidget> {
       User? user = userCredential.user;
 
       if (user != null) {
-        // Perbarui SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
+        // Cek apakah email sudah diverifikasi
+        if (user.emailVerified) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', true);
 
-        widget.onLoginSuccess(true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Login berhasil! Selamat datang.'),
+            ),
+          );
+
+          // Callback untuk login sukses
+          widget.onLoginSuccess(true);
+        } else {
+          // Jika email belum diverifikasi
+          await FirebaseAuth.instance.signOut();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Email Anda belum diverifikasi. Silakan cek email Anda untuk verifikasi.'),
+            ),
+          );
+
+          // Callback untuk login gagal
+          widget.onLoginSuccess(false);
+        }
       }
     } catch (e) {
-      widget.onLoginSuccess(false);
+      // Tangani error login
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login gagal: ${e.toString()}')),
+        SnackBar(
+          content: Text('Login gagal: ${e.toString()}'),
+        ),
       );
     } finally {
       setState(() {
