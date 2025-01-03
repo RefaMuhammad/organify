@@ -1,10 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'home.dart';
+import 'sign_page.dart';
+import 'package:url_launcher/url_launcher.dart'; // Untuk membuka URL di browser
 
-
-class WelcomeScreen extends StatelessWidget {
+class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
+
+  @override
+  _WelcomeScreenState createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<WelcomeScreen> {
+  bool isChecked = false; // Status checkbox
+
+  // Fungsi untuk membuka URL Privacy Policy
+  void _launchPrivacyPolicy() async {
+    const url = 'https://github.com/RefaMuhammad/organify/blob/master/README.md'; // Ganti dengan URL Privacy Policy Anda
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,9 +42,9 @@ class WelcomeScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 20), // Jarak antar elemen
+              const SizedBox(height: 10), // Jarak antar elemen
               Image.asset('assets/filling_survey.png'),
-              const SizedBox(height: 20), // Jarak antar elemen
+              const SizedBox(height: 10), // Jarak antar elemen
               Text(
                 'Selamat Datang di Organify',
                 style: GoogleFonts.poppins(
@@ -46,22 +63,49 @@ class WelcomeScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 65), // Jarak antara teks dan tombol
+              const SizedBox(height: 20), // Jarak antara teks dan checkbox
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center, // Pusatkan checkbox dan teks
+                children: [
+                  Checkbox(
+                    value: isChecked,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        isChecked = value ?? false; // Update status checkbox
+                      });
+                    },
+                  ),
+                  GestureDetector(
+                    onTap: _launchPrivacyPolicy, // Buka URL saat teks diklik
+                    child: Text(
+                      'Saya sudah membaca Privacy Policy',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: Colors.blue, // Warna teks seperti link
+                        decoration: TextDecoration.underline, // Garis bawah seperti link
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20), // Jarak antara checkbox dan tombol
               ElevatedButton(
-                onPressed: () {
+                onPressed: isChecked
+                    ? () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => HomeScreen(
+                      builder: (context) => SignPage(
                         isLoggedIn: false, // Contoh nilai
                         onLogin: () {
                           // Tindakan ketika login berhasil
-                          print("Login berhasil di HomeScreen");
+                          print("Silahkan Login");
                         },
                       ),
                     ),
                   );
-                },
+                }
+                    : null, // Nonaktifkan tombol jika checkbox tidak dicentang
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF222831), // Warna tombol
                   padding: const EdgeInsets.symmetric(
@@ -76,7 +120,7 @@ class WelcomeScreen extends StatelessWidget {
                     color: Colors.white, // Warna teks tombol
                   ),
                 ),
-              )
+              ),
             ],
           ),
         ),

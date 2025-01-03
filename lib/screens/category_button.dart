@@ -5,19 +5,36 @@ import 'category_menu.dart';
 
 class CategoryButton extends StatefulWidget {
   final bool isEditPage; // Tambahkan flag untuk halaman edit
-  const CategoryButton({super.key, this.isEditPage = false}); // Default false
+  final Function(String)? onCategorySelected; // Callback untuk kategori yang dipilih // Nilai default kategori
+  final String? initialCategory; // Nilai default kategori
+  const CategoryButton({
+    super.key,
+    this.isEditPage = false,
+    this.onCategorySelected,
+    this.initialCategory,
+  });
 
   @override
   State<CategoryButton> createState() => _CategoryButtonState();
 }
 
 class _CategoryButtonState extends State<CategoryButton> {
-  String selectedCategory = 'Pribadi'; // Kategori default
+  late String selectedCategory; // Kategori yang ditampilkan
+
+  @override
+  void initState() {
+    super.initState();
+    // Set nilai default kategori jika initialCategory tidak null
+    selectedCategory = widget.initialCategory ?? 'kategori';
+  }
 
   void updateCategory(String category) {
+    print('Kategori yang dipilih: $category'); // Debugging
     setState(() {
       selectedCategory = category;
     });
+    // Panggil callback yang diterima dari parent
+    widget.onCategorySelected?.call(category);
   }
 
   @override

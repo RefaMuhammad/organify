@@ -5,11 +5,15 @@ import 'button.dart';
 class TaskItem extends StatelessWidget {
   final String taskName;
   final String deadline;
+  final String idCatatan; // ID catatan
+  final String uid;
 
   const TaskItem({
     Key? key,
     required this.taskName,
     required this.deadline,
+    required this.idCatatan,
+    required this.uid,
   }) : super(key: key);
 
   @override
@@ -22,6 +26,8 @@ class TaskItem extends StatelessWidget {
             builder: (context) => EditTaskPage(
               taskName: taskName,
               deadline: deadline,
+              uid: uid,
+              idCatatan: idCatatan,
             ),
           ),
         );

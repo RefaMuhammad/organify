@@ -3,10 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class CalendarPopup extends StatefulWidget {
-  const CalendarPopup({super.key});
+  final Function(DateTime)? onDateSelected; // Tambahkan callback untuk tanggal yang dipilih
+  const CalendarPopup({
+    super.key,
+    this.onDateSelected,
+  });
 
   @override
-  State<CalendarPopup> createState() => _CalendarPopupState();
+  _CalendarPopupState createState() => _CalendarPopupState();
 }
 
 class _CalendarPopupState extends State<CalendarPopup> {
@@ -173,7 +177,8 @@ class _CalendarPopupState extends State<CalendarPopup> {
                 ),
                 TextButton(
                   onPressed: () {
-                    print('Tanggal dipilih: $_selectedDate');
+                    print('Tanggal dipilih(popup): ${_selectedDate.toIso8601String()}'); // Debugging
+                    widget.onDateSelected?.call(_selectedDate); // Panggil callback
                     Navigator.of(context).pop();
                   },
                   child: Text(

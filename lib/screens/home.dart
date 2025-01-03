@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:organify/controllers/catatan.dart';
 import 'package:organify/models/catatan.dart';
 import 'package:organify/screens/listTugasSelesai_page.dart';
+import 'package:organify/screens/sign_page.dart';
 import 'package:organify/screens/taskCalender_page.dart';
 import 'package:organify/screens/task_item.dart';
 import 'bottom_navbar.dart';
@@ -25,7 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isPreviousExpanded = false;
   bool _isTodayExpanded = false;
   bool _isUpcomingExpanded = false;
-
+  late String uid;
   int _selectedIndex = 0;
 
   late final VoidCallback login;
@@ -49,6 +50,28 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {});
     });
     fetchData(); // Panggil fetchData saat initState
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      uid = user.uid;
+    } else {
+      // Jika pengguna belum login, arahkan ke halaman login
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SignPage(
+              isLoggedIn: false,
+              onLogin: () {
+                // Callback setelah login berhasil
+                setState(() {
+                  uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+                });
+              },
+            ),
+          ),
+        );
+      });
+    }
   }
 
   String formatTanggalRealtime(DateTime date) {
@@ -136,6 +159,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 return TaskItem(
                   taskName: catatan.namaList,
                   deadline: DateFormat('dd-MM-yyyy').format(DateTime.parse(catatan.tanggalDeadline)),
+                  uid: uid, // Ambil UID dari catatan
+                  idCatatan: catatan.id, // Ambil ID catatan dari catatan
                 );
               }).toList(),
             ),
@@ -150,7 +175,9 @@ class _HomeScreenState extends State<HomeScreen> {
               tasks: filteredCatatans['hariIni']!.map((catatan) {
                 return TaskItem(
                   taskName: catatan.namaList,
-                  deadline: DateFormat('dd-MM').format(DateTime.parse(catatan.tanggalDeadline)),
+                  deadline: DateFormat('dd-MM-yyyy').format(DateTime.parse(catatan.tanggalDeadline)),
+                  uid: uid, // Ambil UID dari catatan
+                  idCatatan: catatan.id, // Ambil ID catatan dari catatan
                 );
               }).toList(),
             ),
@@ -165,7 +192,9 @@ class _HomeScreenState extends State<HomeScreen> {
               tasks: filteredCatatans['yangAkanDatang']!.map((catatan) {
                 return TaskItem(
                   taskName: catatan.namaList,
-                  deadline: DateFormat('dd MMM yyyy').format(DateTime.parse(catatan.tanggalDeadline)),
+                  deadline: DateFormat('dd-MM-yyyy').format(DateTime.parse(catatan.tanggalDeadline)),
+                  uid: uid, // Ambil UID dari catatan
+                  idCatatan: catatan.id, // Ambil ID catatan dari catatan
                 );
               }).toList(),
             ),

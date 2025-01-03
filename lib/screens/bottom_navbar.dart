@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:organify/screens/profile_page.dart';
 import 'package:organify/screens/sign_page.dart';
+import 'package:organify/controllers/catatan.dart'; // Import CatatanController
+import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
 import 'category_button.dart';
 import 'calendar_popup.dart';
 
@@ -22,12 +24,17 @@ class BottomNavbar extends StatefulWidget {
 }
 
 class _BottomNavbarState extends State<BottomNavbar> {
+  final CatatanController _catatanController = CatatanController();
+  final TextEditingController _namaListController = TextEditingController();
+  String? selectedKategori;
+  String? selectedTanggalDeadline;
+
   void _showBtmSheet(BuildContext context) {
     var size = MediaQuery.sizeOf(context);
     showModalBottomSheet(
       isScrollControlled: true,
       context: context,
-      backgroundColor: Colors.white, // Latar belakang BottomSheet
+      backgroundColor: Colors.white,
       builder: (context) {
         return Padding(
           padding: EdgeInsets.only(
@@ -38,7 +45,7 @@ class _BottomNavbarState extends State<BottomNavbar> {
           ),
           child: Container(
             decoration: const BoxDecoration(
-              color: Colors.white, // Warna putih penuh untuk Container
+              color: Colors.white,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -46,10 +53,11 @@ class _BottomNavbarState extends State<BottomNavbar> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: Color(0xFFD9D9D9), // Warna putih untuk TextField
+                    color: Color(0xFFD9D9D9),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: TextField(
+                    controller: _namaListController,
                     decoration: InputDecoration(
                       hintText: 'Buat tugas baru disini',
                       hintStyle: GoogleFonts.poppins(
@@ -65,13 +73,20 @@ class _BottomNavbarState extends State<BottomNavbar> {
                   children: [
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFD9D9D9), // Warna putih tombol
+                        backgroundColor: Color(0xFFD9D9D9),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
                       ),
                       onPressed: () {},
-                      child: const CategoryButton(),
+                      child: CategoryButton(
+                        onCategorySelected: (kategori) {
+                          print('Kategori yang dipilih(botnav): $kategori'); // Debugging
+                          setState(() {
+                            selectedKategori = kategori;
+                          });
+                        },
+                      ),
                     ),
                     const SizedBox(width: 10),
                     GestureDetector(
@@ -79,7 +94,14 @@ class _BottomNavbarState extends State<BottomNavbar> {
                         showDialog(
                           context: context,
                           builder: (BuildContext context) {
-                            return const CalendarPopup();
+                            return CalendarPopup(
+                              onDateSelected: (tanggal) {
+                                print('Tanggal yang dipilih: $tanggal'); // Debugging
+                                setState(() {
+                                  selectedTanggalDeadline = tanggal.toIso8601String();
+                                });
+                              },
+                            );
                           },
                         );
                       },
@@ -98,8 +120,41 @@ class _BottomNavbarState extends State<BottomNavbar> {
                     ),
                     const Spacer(),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).pop();
+                      onTap: () async {
+                        print('Nama List: ${_namaListController.text}'); // Debugging
+                        print('Kategori: $selectedKategori'); // Debugging
+                        print('Tanggal Deadline: $selectedTanggalDeadline'); // Debugging
+
+                        if (_namaListController.text.isNotEmpty &&
+                            selectedKategori != null &&
+                            selectedTanggalDeadline != null) {
+                          User? user = FirebaseAuth.instance.currentUser;
+                          if (user != null) {
+                            print('UID: ${user.uid}'); // Debugging
+                            try {
+                              await _catatanController.createCatatan(
+                                uid: user.uid,
+                                kategori: selectedKategori!,
+                                namaList: _namaListController.text,
+                                tanggalDeadline: selectedTanggalDeadline!,
+                              );
+                              Navigator.of(context).pop(); // Tutup BottomSheet
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Catatan berhasil dibuat')),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Gagal membuat catatan: $e')),
+                              );
+                            }
+                          } else {
+                            print('User tidak ditemukan'); // Debugging
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Harap isi semua field')),
+                          );
+                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.all(16),

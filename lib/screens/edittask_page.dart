@@ -1,25 +1,80 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:organify/controllers/catatan.dart';
 import 'package:organify/screens/category_button.dart';
-import 'package:organify/screens/edit_catatan.dart'; // Sesuaikan dengan path file Anda
+import 'package:organify/screens/edit_catatan.dart';
+import 'package:organify/screens/home.dart'; // Sesuaikan dengan path file Anda
 
 class EditTaskPage extends StatefulWidget {
-  final String taskName;
-  final String deadline;
+  final String taskName; // Nama tugas
+  final String deadline; // Deadline tugas
+  final String uid; // UID pengguna
+  final String idCatatan; // ID catatan
 
   const EditTaskPage({
-    Key? key,
+    super.key,
     required this.taskName,
     required this.deadline,
-  }) : super(key: key);
+    required this.uid,
+    required this.idCatatan,
+  });
 
   @override
   _EditTaskPageState createState() => _EditTaskPageState();
 }
 
 class _EditTaskPageState extends State<EditTaskPage> {
-  String? _judul; // Variabel untuk menyimpan judul
-  String? _catatan; // Variabel untuk menyimpan catatan
+  String? _judul;
+  String? _catatan;
+  String? _kategoriTugas;
+  final CatatanController _catatanController = CatatanController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchKategoriTugas();
+  }
+
+  Future<void> _fetchKategoriTugas() async {
+    try {
+      final kategori = await _catatanController.getKategoriTugas(widget.uid, widget.idCatatan);
+      setState(() {
+        _kategoriTugas = kategori;
+      });
+    } catch (e) {
+      print('Error fetching kategori tugas: $e');
+    }
+  }
+
+  // Fungsi untuk menghapus catatan
+  Future<void> _hapusCatatan() async {
+    try {
+      await _catatanController.deleteCatatan(widget.uid, widget.idCatatan);
+      // Navigasi ke halaman home setelah menghapus
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen(isLoggedIn: true, onLogin: () {})),
+      );
+    } catch (e) {
+      print('Error deleting catatan: $e');
+      // Tampilkan pesan error jika diperlukan
+    }
+  }
+
+// Fungsi untuk mengupdate status catatan menjadi selesai
+  Future<void> _selesaikanCatatan() async {
+    try {
+      await _catatanController.updateStatusCatatan(widget.uid, widget.idCatatan, true);
+      // Navigasi ke halaman home setelah mengupdate
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen(isLoggedIn: true, onLogin: () {})),
+      );
+    } catch (e) {
+      print('Error updating status catatan: $e');
+      // Tampilkan pesan error jika diperlukan
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,19 +89,25 @@ class _EditTaskPageState extends State<EditTaskPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFB3C8CF),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB3C8CF),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              onPressed: () {},
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CategoryButton(
+                    isEditPage: true,
+                    initialCategory: _kategoriTugas,
+                    onCategorySelected: (kategori) {
+                      print('Kategori yang dipilih: $kategori');
+                    },
                   ),
-                ),
-                onPressed: () {},
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CategoryButton(isEditPage: true),
-                  ],
-                ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
             Text(
@@ -126,20 +187,17 @@ class _EditTaskPageState extends State<EditTaskPage> {
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-
                       ],
                     ),
                   ],
                 ),
                 GestureDetector(
                   onTap: () async {
-                    // Navigasi ke halaman edit catatan dan tunggu hasilnya
                     final result = await Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => EditCatatanPage()),
                     );
 
-                    // Jika ada hasil (catatan), simpan dan perbarui tampilan
                     if (result != null) {
                       setState(() {
                         _judul = result['judul'];
@@ -158,7 +216,6 @@ class _EditTaskPageState extends State<EditTaskPage> {
                 ),
               ],
             ),
-            // Tampilkan judul jika ada
             if (_judul != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
@@ -171,7 +228,6 @@ class _EditTaskPageState extends State<EditTaskPage> {
                   ),
                 ),
               ),
-            // Tampilkan catatan jika ada
             if (_catatan != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
@@ -193,7 +249,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 TextButton(
-                  onPressed: () {},
+                  onPressed: _hapusCatatan, // Panggil fungsi hapus catatan
                   child: Text(
                     'HAPUS',
                     style: GoogleFonts.poppins(
@@ -206,7 +262,9 @@ class _EditTaskPageState extends State<EditTaskPage> {
                 Row(
                   children: [
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.pop(context); // Kembali ke halaman sebelumnya
+                      },
                       child: Text(
                         'BATAL',
                         style: GoogleFonts.poppins(
@@ -217,7 +275,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: _selesaikanCatatan, // Panggil fungsi selesaikan catatan
                       child: Text(
                         'SELESAI',
                         style: GoogleFonts.poppins(

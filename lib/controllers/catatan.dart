@@ -24,6 +24,46 @@ class CatatanController {
     }
   }
 
+  // Method untuk menghapus catatan
+  Future<void> deleteCatatan(String uid, String id) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/catatan/$uid/$id'),
+      );
+
+      if (response.statusCode == 200) {
+        print('Catatan berhasil dihapus'); // Debugging
+      } else {
+        throw Exception('Gagal menghapus catatan: ${response.body}');
+      }
+    } catch (e) {
+      print('Error deleting catatan: $e'); // Debugging
+      throw e;
+    }
+  }
+
+  // Method untuk mengupdate status catatan
+  Future<void> updateStatusCatatan(String uid, String id, bool status) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/catatan/$uid/$id'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'status': status,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('Status catatan berhasil diupdate'); // Debugging
+      } else {
+        throw Exception('Gagal mengupdate status catatan: ${response.body}');
+      }
+    } catch (e) {
+      print('Error updating status catatan: $e'); // Debugging
+      throw e;
+    }
+  }
+
   // Method untuk memfilter catatan berdasarkan tanggalDeadline
   Future<Map<String, List<Catatan>>> getFilteredCatatans(String uid) async {
     List<Catatan> catatans = await getCatatans(uid);
@@ -116,6 +156,56 @@ class CatatanController {
       }
     } catch (e) {
       print('Error fetching catatans: $e'); // Debugging
+      throw e;
+    }
+  }
+
+  Future<void> createCatatan({
+    required String uid,
+    required String kategori,
+    required String namaList,
+    required String tanggalDeadline,
+    bool status = false, // Default status false (belum selesai)
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/catatan'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'uid': uid,
+          'kategori': kategori,
+          'namaList': namaList,
+          'tanggalDeadline': tanggalDeadline,
+          'status': status,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        print('Catatan berhasil dibuat'); // Debugging
+      } else {
+        throw Exception('Gagal membuat catatan: ${response.body}');
+      }
+    } catch (e) {
+      print('Error creating catatan: $e'); // Debugging
+      throw e;
+    }
+  }
+
+  // Fungsi untuk mencari kategori tugas berdasarkan uid dan idCatatan
+  Future<String?> getKategoriTugas(String uid, String idCatatan) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/catatan?uid=$uid&id=$idCatatan'));
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseBody = json.decode(response.body);
+        final List<dynamic> data = responseBody['data'];
+        if (data.isNotEmpty) {
+          final catatan = Catatan.fromJson(data.first);
+          return catatan.kategori; // Kembalikan kategori tugas
+        }
+      }
+      return null; // Jika tidak ditemukan
+    } catch (e) {
+      print('Error fetching kategori tugas: $e');
       throw e;
     }
   }

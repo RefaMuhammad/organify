@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:organify/models/catatan.dart';
 import 'package:organify/screens/akun_page.dart';
 import 'package:organify/screens/grafik_batang.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'bottom_navbar.dart';
 import 'sign_page.dart';
 import 'package:organify/controllers/catatan.dart';
+import 'package:intl/intl.dart'; // Import package intl untuk DateFormat
 
 class ProfilePage extends StatefulWidget {
   final bool isLoggedIn;
@@ -23,6 +25,7 @@ class _ProfilePageState extends State<ProfilePage> {
   late String uid = '';
   int completedTasks = 0;
   int pendingTasks = 0;
+  List<Catatan> tasksWithin7Days = [];
   final CatatanController _catatanController = CatatanController();
   late DateTime nearestMonday;
   late List<DateTime> weekDates;
@@ -39,6 +42,7 @@ class _ProfilePageState extends State<ProfilePage> {
     DateTime now = DateTime.now();
     nearestMonday = getNearestMonday(now);
     weekDates = getWeekDates(nearestMonday);
+    fetchTasksWithin7Days();
   }
 
   // Fungsi untuk mendapatkan tanggal Senin terdekat
@@ -91,6 +95,21 @@ class _ProfilePageState extends State<ProfilePage> {
         });
       } catch (e) {
         print('Error fetching task summary: $e');
+      }
+    }
+  }
+
+  // Fungsi untuk mengambil tugas dalam 7 hari ke depan
+  Future<void> fetchTasksWithin7Days() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final tasks = await _catatanController.getTasksWithin7Days(user.uid);
+        setState(() {
+          tasksWithin7Days = tasks;
+        });
+      } catch (e) {
+        print('Error fetching tasks within 7 days: $e');
       }
     }
   }
@@ -281,6 +300,7 @@ class _ProfilePageState extends State<ProfilePage> {
               borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.all(16),
+            width: double.infinity,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -459,14 +479,15 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // Modifikasi _buildTaskList untuk menampilkan tugas dari database
   Widget _buildTaskList() {
     return Column(
-      children: [
-        _buildTaskItem('Tugas Prak. MBD', '20-12'),
-        _buildTaskItem('Tugas Proyek IMK', '20-12'),
-        _buildTaskItem('Tugas PAM', '21-12'),
-        _buildTaskItem('Tugas PAW', '22-12'),
-      ],
+      children: tasksWithin7Days.map((catatan) {
+        return _buildTaskItem(
+          catatan.namaList,
+          DateFormat('dd-MM').format(DateTime.parse(catatan.tanggalDeadline)),
+        );
+      }).toList(),
     );
   }
 
