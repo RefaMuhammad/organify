@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:organify/screens/sign_page.dart';
@@ -8,55 +9,98 @@ import 'package:organify/screens/profile_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await Firebase.initializeApp();
-    print('Firebase initialized successfully');
-  } catch (e) {
-    print('Firebase initialization failed: $e');
-  }
+  await Firebase.initializeApp();
   runApp(MyApp());
 }
 
-
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   @override
-  State<MyApp> createState() => _MyAppState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Organify App',
+      debugShowCheckedModeBanner: false,
+      home: AppEntryPoint(),
+      routes: {
+        '/welcome': (context) => WelcomeScreen(),
+        '/home': (context) => HomeScreen(
+          isLoggedIn: true,  // Pass the 'isLoggedIn' value
+          onLogin: () {},    // You can pass the logout handler here
+        ),
+        '/signpage': (context) => SignPage(
+          isLoggedIn: false,  // Pass the 'isLoggedIn' value
+          onLogin: () {},     // You can pass the login handler here
+        ),
+        '/profile': (context) => ProfilePage(
+          isLoggedIn: true,   // Pass the 'isLoggedIn' value
+        ),
+      },
+    );
+  }
 }
 
-class _MyAppState extends State<MyApp> {
+class AppEntryPoint extends StatefulWidget {
+  @override
+  _AppEntryPointState createState() => _AppEntryPointState();
+}
+
+class _AppEntryPointState extends State<AppEntryPoint> {
   bool isFirstLaunch = true;
   bool isLoggedIn = false;
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _checkFirstLaunch();
-    _checkLoginStatus(); // Tambahkan ini untuk memeriksa status login saat aplikasi dimulai
+    _initializeApp();
   }
 
-  Future<void> _checkFirstLaunch() async {
-    final prefs = await SharedPreferences.getInstance();
-    final hasLaunchedBefore = prefs.getBool('hasLaunchedBefore') ?? false;
+  Future<void> _initializeApp() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hasLaunchedBefore = prefs.getBool('hasLaunchedBefore') ?? false;
+      final sharedPrefLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
-    setState(() {
-      isFirstLaunch = !hasLaunchedBefore;
-    });
+      final firebaseUser = FirebaseAuth.instance.currentUser;
 
-    if (!hasLaunchedBefore) {
-      await prefs.setBool('hasLaunchedBefore', true);
+      setState(() {
+        isFirstLaunch = !hasLaunchedBefore;
+        isLoggedIn = firebaseUser != null || sharedPrefLoggedIn;
+      });
+
+      if (!hasLaunchedBefore) {
+        await prefs.setBool('hasLaunchedBefore', true);
+      }
+
+      if (firebaseUser != null && !sharedPrefLoggedIn) {
+        await prefs.setBool('isLoggedIn', true);
+      }
+    } catch (e) {
+      print('Error initializing app: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
-  Future<void> _checkLoginStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final loggedIn = prefs.getBool('isLoggedIn') ?? false;
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-    setState(() {
-      isLoggedIn = loggedIn;
-    });
+    if (isFirstLaunch) {
+      return WelcomeScreen();
+    }
+
+    return isLoggedIn
+        ? HomeScreen(isLoggedIn: isLoggedIn, onLogin: _handleLogout)
+        : SignPage(isLoggedIn: isLoggedIn, onLogin: _handleLogin);
   }
 
-  void login() async {
+  void _handleLogin() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', true);
 
@@ -65,35 +109,13 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void logout() async {
+  void _handleLogout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', false);
+    await FirebaseAuth.instance.signOut();
 
     setState(() {
       isLoggedIn = false;
     });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Organify App',
-      debugShowCheckedModeBanner: false,
-      initialRoute: _determineInitialRoute(),
-      routes: {
-        '/welcome': (context) => WelcomeScreen(),
-        '/home': (context) => HomeScreen(isLoggedIn: isLoggedIn, onLogin: logout),
-        '/profile': (context) => ProfilePage(isLoggedIn: isLoggedIn),
-        '/signpage': (context) => SignPage(isLoggedIn: isLoggedIn, onLogin: login),
-      },
-    );
-  }
-
-  String _determineInitialRoute() {
-    if (isFirstLaunch) {
-      return '/welcome';
-    } else {
-      return isLoggedIn ? '/home' : '/welcome';
-    }
   }
 }

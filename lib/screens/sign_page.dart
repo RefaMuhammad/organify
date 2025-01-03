@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:organify/screens/home.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignPage extends StatefulWidget {
   final bool isLoggedIn;
@@ -104,6 +105,10 @@ class _SignInWidgetState extends State<SignInWidget> {
       User? user = userCredential.user;
 
       if (user != null) {
+        // Perbarui SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+
         widget.onLoginSuccess(true);
       }
     } catch (e) {
@@ -288,6 +293,9 @@ class _SignUpWidgetState extends State<SignUpWidget> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Semua field harus diisi!')),
         );
+        setState(() {
+          _isLoading = false;
+        }); // Hentikan loading di sini
         return;
       }
 
@@ -312,6 +320,8 @@ class _SignUpWidgetState extends State<SignUpWidget> {
       );
 
       widget.onSwitch();
+      return;
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal membuat akun: $e')),
