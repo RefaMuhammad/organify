@@ -69,7 +69,7 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         uid = user.uid;
       });
-
+      print('UID: $uid');
       DocumentSnapshot snapshot = await FirebaseFirestore.instance
           .collection('login')
           .doc(uid)
@@ -188,6 +188,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     const SizedBox(height: 5),
+
                   ],
                 ),
               ),
@@ -208,6 +209,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     color: Color(0xFF222831),
                   ),
                 ),
+                Text(uid),
               ],
             ),
           ),

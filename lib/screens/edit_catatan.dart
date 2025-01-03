@@ -1,7 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:organify/controllers/todo_item.dart'; // Import controller
+import 'package:organify/models/todo_item.dart'; // Import model TodoItem
+import 'package:intl/intl.dart'; // Untuk format tanggal
 
 class EditCatatanPage extends StatefulWidget {
+  final String uid;
+  final String idCatatan;
+
+  const EditCatatanPage({
+    Key? key,
+    required this.uid,
+    required this.idCatatan,
+  }) : super(key: key);
+
   @override
   _EditCatatanPageState createState() => _EditCatatanPageState();
 }
@@ -9,6 +21,75 @@ class EditCatatanPage extends StatefulWidget {
 class _EditCatatanPageState extends State<EditCatatanPage> {
   final TextEditingController _judulController = TextEditingController();
   final TextEditingController _catatanController = TextEditingController();
+  final TodoItemController _todoItemController = TodoItemController();
+  TodoItem? _todoItem;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTodoItem();
+  }
+
+  // Method untuk mengambil todo item dari database
+  Future<void> _fetchTodoItem() async {
+    try {
+      print('UID: ${widget.uid}');
+      print('ID Catatan: ${widget.idCatatan}');
+
+      final todoItem = await _todoItemController.getTodoItem(widget.uid, widget.idCatatan);
+      setState(() {
+        _todoItem = todoItem;
+        if (todoItem != null) {
+          print('Judul: ${todoItem.judul}');
+          print('Isi: ${todoItem.isi}');
+
+          _judulController.text = todoItem.judul;
+          _catatanController.text = todoItem.isi;
+        } else {
+          print('TodoItem tidak ditemukan atau null');
+          // Set nilai default atau tampilkan pesan ke pengguna
+          _judulController.text = 'Judul tidak ditemukan';
+          _catatanController.text = 'Isi tidak ditemukan';
+        }
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching todo item: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Method untuk menyimpan perubahan todo item
+  Future<void> _saveChanges() async {
+    final judul = _judulController.text;
+    final isi = _catatanController.text;
+
+    if (judul.isEmpty || isi.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Judul dan catatan tidak boleh kosong')),
+      );
+      return;
+    }
+
+    try {
+      await _todoItemController.updateTodoItem(
+        uid: widget.uid,
+        idCatatan: widget.idCatatan,
+        judul: judul,
+        isi: isi,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Perubahan berhasil disimpan')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal menyimpan perubahan: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,15 +101,19 @@ class _EditCatatanPageState extends State<EditCatatanPage> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            // Kembalikan nilai catatan saat tombol back diklik
-            Navigator.pop(context, {
-              'judul': _judulController.text,
-              'catatan': _catatanController.text,
-            });
+            Navigator.pop(context);
           },
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.save, color: Colors.black),
+            onPressed: _saveChanges,
+          ),
+        ],
       ),
-      body: Padding(
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,7 +133,7 @@ class _EditCatatanPageState extends State<EditCatatanPage> {
             ),
             SizedBox(height: 16),
             Text(
-              'Terakhir diperbarui: 18/12/2024',
+              'Terakhir diperbarui: ${_todoItem != null ? DateFormat('dd/MM/yyyy HH:mm').format(_todoItem!.terakhirDiperbarui) : 'Tidak ada data'}',
               style: GoogleFonts.poppins(
                 fontSize: 10,
                 fontWeight: FontWeight.w400,

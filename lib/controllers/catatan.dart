@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:organify/models/catatan.dart'; // Import model
+import 'package:organify/models/catatan.dart';
+import 'package:organify/models/todo_item.dart'; // Import model
 
 class CatatanController {
   final String baseUrl = 'https://organify-api-crud-38856081727.asia-southeast2.run.app';
@@ -21,6 +22,18 @@ class CatatanController {
     } catch (e) {
       print('Error fetching catatans: $e'); // Debugging
       throw e;
+    }
+  }
+
+  // Method untuk mengambil todoItem dari catatan tertentu
+  Future<TodoItem?> getTodoItem(String uid, String idCatatan) async {
+    try {
+      final catatans = await getCatatans(uid);
+      final catatan = catatans.firstWhere((catatan) => catatan.id == idCatatan);
+      return catatan.todoItem; // Ambil todoItem dari catatan
+    } catch (e) {
+      print('Error fetching todoItem: $e');
+      return null;
     }
   }
 
@@ -68,8 +81,8 @@ class CatatanController {
   Future<Map<String, List<Catatan>>> getFilteredCatatans(String uid) async {
     List<Catatan> catatans = await getCatatans(uid);
     DateTime now = DateTime.now();
-    DateTime todayStart = DateTime(now.year, now.month, now.day);
-    DateTime todayEnd = todayStart.add(Duration(days: 1));
+    DateTime todayStart = DateTime(now.year, now.month, now.day); // Mulai hari ini (00:00:00)
+    DateTime todayEnd = todayStart.add(Duration(days: 1)); // Akhir hari ini (23:59:59)
 
     List<Catatan> sebelumnya = [];
     List<Catatan> hariIni = [];
@@ -79,7 +92,8 @@ class CatatanController {
       DateTime deadline = DateTime.parse(catatan.tanggalDeadline);
       if (deadline.isBefore(todayStart)) {
         sebelumnya.add(catatan);
-      } else if (deadline.isAfter(todayStart) && deadline.isBefore(todayEnd)) {
+      } else if (deadline.isAtSameMomentAs(todayStart) ||
+          (deadline.isAfter(todayStart) && deadline.isBefore(todayEnd))) {
         hariIni.add(catatan);
       } else if (deadline.isAfter(todayEnd)) {
         yangAkanDatang.add(catatan);
@@ -206,6 +220,37 @@ class CatatanController {
       return null; // Jika tidak ditemukan
     } catch (e) {
       print('Error fetching kategori tugas: $e');
+      throw e;
+    }
+  }
+
+  Future<void> updateCatatan({
+    required String uid,
+    required String idCatatan,
+    String? kategori,
+    String? namaList,
+    String? tanggalDeadline,
+    bool? status,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/catatan/$uid/$idCatatan'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          if (kategori != null) 'kategori': kategori,
+          if (namaList != null) 'namaList': namaList,
+          if (tanggalDeadline != null) 'tanggalDeadline': tanggalDeadline,
+          if (status != null) 'status': status,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('Catatan berhasil diupdate'); // Debugging
+      } else {
+        throw Exception('Gagal mengupdate catatan: ${response.body}');
+      }
+    } catch (e) {
+      print('Error updating catatan: $e'); // Debugging
       throw e;
     }
   }
