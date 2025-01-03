@@ -78,10 +78,10 @@ class _CategoryMenuState extends State<CategoryMenu> {
             // Tampilkan kategori dari database
             for (var kategori in kategoriList)
               ListTile(
-                title: Text(kategori.nama),
+                title: Text(kategori.kategori),
                 onTap: () {
-                  print('Kategori dipilih(menu): ${kategori.nama}'); // Debugging
-                  widget.onCategorySelected?.call(kategori.nama); // Panggil callback
+                  print('Kategori dipilih(menu): ${kategori.kategori}'); // Debugging
+                  widget.onCategorySelected?.call(kategori.kategori); // Panggil callback
                   Navigator.of(context).pop();
                 },
               ),

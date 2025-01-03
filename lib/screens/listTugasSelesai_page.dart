@@ -1,33 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:organify/controllers/catatan.dart'; // Import CatatanController
+import 'package:organify/models/catatan.dart'; // Import model Catatan
+import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth untuk mendapatkan UID
+import 'package:intl/intl.dart';
 
-class TugasSelesaiPage extends StatelessWidget {
-  // Data dummy untuk tugas selesai
-  final List<Map<String, dynamic>> tugasSelesaiList = [
-    {
-      'tanggal': '17/12/2024',
-      'tugas': [
-        {'nama': 'Tugas Praktikum MPPL'},
-        {'nama': 'Tugas Analisis Algoritma'},
-      ],
-    },
-    {
-      'tanggal': '18/12/2024',
-      'tugas': [
-        {'nama': 'Tugas Flutter'},
-        {'nama': 'Tugas Laravel'},
-      ],
-    },
-    {
-      'tanggal': '19/12/2024',
-      'tugas': [
-        {'nama': 'Tugas Desain UI/UX'},
-      ],
-    },
-  ];
+class TugasSelesaiPage extends StatefulWidget {
+  @override
+  _TugasSelesaiPageState createState() => _TugasSelesaiPageState();
+}
+
+class _TugasSelesaiPageState extends State<TugasSelesaiPage> {
+  final CatatanController _catatanController = CatatanController();
+  List<Catatan> _tugasSelesaiList = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTugasSelesai();
+  }
+
+  // Fungsi untuk mengambil tugas selesai dari database
+  Future<void> _fetchTugasSelesai() async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final List<Catatan> catatans = await _catatanController.getCatatans(user.uid);
+        setState(() {
+          _tugasSelesaiList = catatans.where((catatan) => catatan.status == true).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching tugas selesai: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Fungsi untuk mengelompokkan tugas selesai berdasarkan tanggal
+  Map<String, List<Catatan>> _groupTugasByTanggal(List<Catatan> tugasSelesaiList) {
+    Map<String, List<Catatan>> groupedTugas = {};
+
+    for (var tugas in tugasSelesaiList) {
+      String tanggal = DateFormat('dd/MM/yyyy').format(DateTime.parse(tugas.tanggalDeadline));
+      if (!groupedTugas.containsKey(tanggal)) {
+        groupedTugas[tanggal] = [];
+      }
+      groupedTugas[tanggal]!.add(tugas);
+    }
+
+    return groupedTugas;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final Map<String, List<Catatan>> groupedTugas = _groupTugasByTanggal(_tugasSelesaiList);
+
     return Scaffold(
       backgroundColor: Color(0xFFF1F0E8), // Background color #F1F0E8
       appBar: AppBar(
@@ -50,20 +81,25 @@ class TugasSelesaiPage extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          Text("Tugas Selesai", style: GoogleFonts.poppins(
+          Text(
+            "Tugas Selesai",
+            style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF4E6167)
-          )),
+              color: Color(0xFF4E6167),
+            ),
+          ),
           SizedBox(height: 15),
           // Loop untuk menampilkan setiap tanggal dan tugasnya
-          for (var tugasSelesai in tugasSelesaiList)
+          for (var tanggal in groupedTugas.keys)
             _buildSection(
-              title: tugasSelesai['tanggal'],
-              tasks: tugasSelesai['tugas'],
+              title: tanggal,
+              tasks: groupedTugas[tanggal]!,
             ),
         ],
       ),
@@ -73,7 +109,7 @@ class TugasSelesaiPage extends StatelessWidget {
   // Fungsi untuk membangun section dengan title dan list tugas
   Widget _buildSection({
     required String title,
-    required List<Map<String, dynamic>> tasks,
+    required List<Catatan> tasks,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,7 +167,7 @@ class TugasSelesaiPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            tugas['nama'],
+                            tugas.namaList,
                             style: GoogleFonts.poppins(
                               fontSize: 15,
                               color: Color(0x80222831),
@@ -140,7 +176,7 @@ class TugasSelesaiPage extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            "17-2",
+                            tugas.kategori,
                             style: GoogleFonts.poppins(
                               fontSize: 10,
                               color: Color(0x80222831),
@@ -153,11 +189,6 @@ class TugasSelesaiPage extends StatelessWidget {
                     // Jarak antara teks dan ikon flag
                     SizedBox(width: 10),
                     // Ikon flag di sisi kanan
-                    Icon(
-                      Icons.flag,
-                      color: Color(0x80222831), // Ubah warna ikon
-                      size: 24, // Ubah ukuran ikon
-                    ),
                   ],
                 ),
               ),

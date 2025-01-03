@@ -2,13 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
-
-class Task {
-  final String title;
-  final DateTime date;
-
-  Task({required this.title, required this.date});
-}
+import 'package:organify/controllers/catatan.dart'; // Import CatatanController
+import 'package:organify/models/catatan.dart'; // Import model Catatan
+import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth untuk mendapatkan UID
 
 class TaskCalendar extends StatefulWidget {
   @override
@@ -20,25 +16,47 @@ class _TaskCalendarState extends State<TaskCalendar> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-  // Data dummy untuk tugas
-  Map<DateTime, List<Task>> tasks = {
-    DateTime(2024, 12, 5): [Task(title: 'Tugas Mk 1', date: DateTime(2024, 12, 5))],
-    DateTime(2024, 12, 15): [Task(title: 'Tugas Mk 2', date: DateTime(2024, 12, 15))],
-    DateTime(2024, 12, 20): [
-      Task(title: 'Tugas Mk 3', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 4', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 5', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 6', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 7', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 8', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 9', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 10', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 11', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 12', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 13', date: DateTime(2024, 12, 20)),
-      Task(title: 'Tugas Mk 14', date: DateTime(2024, 12, 20)),
-    ],
-  };
+  final CatatanController _catatanController = CatatanController();
+  Map<DateTime, List<Task>> tasks = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTasks();
+  }
+
+  // Fungsi untuk mengambil tugas dari database
+  Future<void> _fetchTasks() async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final List<Catatan> catatans = await _catatanController.getCatatans(user.uid);
+
+        // Kelompokkan tugas berdasarkan tanggal
+        Map<DateTime, List<Task>> groupedTasks = {};
+        for (var catatan in catatans) {
+          DateTime deadline = DateTime.parse(catatan.tanggalDeadline);
+          DateTime date = DateTime(deadline.year, deadline.month, deadline.day);
+
+          if (!groupedTasks.containsKey(date)) {
+            groupedTasks[date] = [];
+          }
+          groupedTasks[date]!.add(Task(title: catatan.namaList, date: deadline));
+        }
+
+        setState(() {
+          tasks = groupedTasks;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching tasks: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +65,9 @@ class _TaskCalendarState extends State<TaskCalendar> {
       appBar: AppBar(
         backgroundColor: Color(0xFFD9D9D9), // Background color AppBar #D9D9D9
       ),
-      body: Container(
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Container(
         child: Column(
           children: [
             Container(
@@ -118,12 +138,6 @@ class _TaskCalendarState extends State<TaskCalendar> {
                           fontWeight: FontWeight.w500,
                           color: Color(0xFF222831)), // Gaya teks
                     ),
-                    trailing: IconButton(
-                      icon: Icon(Icons.flag), // Warna ikon
-                      onPressed: () {
-                        _addEventToCalendar(task);
-                      },
-                    ),
                   ),
                 ))
                     .toList() ??
@@ -155,4 +169,11 @@ class _TaskCalendarState extends State<TaskCalendar> {
       );
     });
   }
+}
+
+class Task {
+  final String title;
+  final DateTime date;
+
+  Task({required this.title, required this.date});
 }

@@ -93,7 +93,6 @@ class _EditTaskPageState extends State<EditTaskPage> {
         idCatatan: widget.idCatatan,
         kategori: _kategoriTugas, // Kategori yang dipilih
         tanggalDeadline: selectedTanggalDeadline, // Tanggal deadline yang dipilih
-        status: true, // Set status menjadi selesai
       );
 
       // Navigasi ke halaman home setelah mengupdate

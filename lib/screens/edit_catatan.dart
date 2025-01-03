@@ -38,22 +38,31 @@ class _EditCatatanPageState extends State<EditCatatanPage> {
       print('ID Catatan: ${widget.idCatatan}');
 
       final todoItem = await _todoItemController.getTodoItem(widget.uid, widget.idCatatan);
-      setState(() {
-        _todoItem = todoItem;
-        if (todoItem != null) {
-          print('Judul: ${todoItem.judul}');
-          print('Isi: ${todoItem.isi}');
-
+      if (todoItem == null) {
+        print('TodoItem tidak ditemukan, membuat todoItem baru...');
+        // Buat todoItem baru jika tidak ditemukan
+        await _todoItemController.tambahTodoItem(
+          uid: widget.uid,
+          idCatatan: widget.idCatatan,
+          judul: 'Judul Default',
+          isi: 'Isi Default',
+        );
+        // Ambil kembali todoItem setelah dibuat
+        final newTodoItem = await _todoItemController.getTodoItem(widget.uid, widget.idCatatan);
+        setState(() {
+          _todoItem = newTodoItem;
+          _judulController.text = newTodoItem?.judul ?? 'Judul Default';
+          _catatanController.text = newTodoItem?.isi ?? 'Isi Default';
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _todoItem = todoItem;
           _judulController.text = todoItem.judul;
           _catatanController.text = todoItem.isi;
-        } else {
-          print('TodoItem tidak ditemukan atau null');
-          // Set nilai default atau tampilkan pesan ke pengguna
-          _judulController.text = 'Judul tidak ditemukan';
-          _catatanController.text = 'Isi tidak ditemukan';
-        }
-        _isLoading = false;
-      });
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       print('Error fetching todo item: $e');
       setState(() {
@@ -75,12 +84,25 @@ class _EditCatatanPageState extends State<EditCatatanPage> {
     }
 
     try {
-      await _todoItemController.updateTodoItem(
-        uid: widget.uid,
-        idCatatan: widget.idCatatan,
-        judul: judul,
-        isi: isi,
-      );
+      // Cek apakah todoItem sudah ada
+      if (_todoItem == null) {
+        // Jika tidak ada, buat todoItem baru
+        await _todoItemController.tambahTodoItem(
+          uid: widget.uid,
+          idCatatan: widget.idCatatan,
+          judul: judul,
+          isi: isi,
+        );
+      } else {
+        // Jika sudah ada, update todoItem
+        await _todoItemController.updateTodoItem(
+          uid: widget.uid,
+          idCatatan: widget.idCatatan,
+          judul: judul,
+          isi: isi,
+        );
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Perubahan berhasil disimpan')),
       );

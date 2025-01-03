@@ -348,28 +348,6 @@ class _AccountPageState extends State<AccountPage> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'UID',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF222831),
-                  ),
-                ),
-                Text(
-                  uid, // Tampilkan UID di sini
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF4E6167),
-                  ),
-                ),
-                SizedBox(height: 8),
-                const Divider(
-                  thickness: 1,
-                  color: Color(0xFFB8B7B7),
-                ),
-                SizedBox(height: 8),
-                Text(
                   'Email',
                   style: GoogleFonts.poppins(
                     fontSize: 14,

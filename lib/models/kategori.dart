@@ -1,17 +1,17 @@
 class Kategori {
   final String uid;
-  final String nama;
+  final String kategori;
 
   Kategori({
     required this.uid,
-    required this.nama,
+    required this.kategori,
   });
 
   // Konversi dari JSON ke objek Kategori
   factory Kategori.fromJson(Map<String, dynamic> json) {
     return Kategori(
       uid: json['uid'],
-      nama: json['kategori'],
+      kategori: json['kategori'],
     );
   }
 
@@ -19,7 +19,7 @@ class Kategori {
   Map<String, dynamic> toJson() {
     return {
       'uid': uid,
-      'kategori': nama,
+      'kategori': kategori,
     };
   }
 }

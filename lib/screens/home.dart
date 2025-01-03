@@ -2,7 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:organify/controllers/catatan.dart';
+import 'package:organify/controllers/kategori.dart';
 import 'package:organify/models/catatan.dart';
+import 'package:organify/models/kategori.dart';
 import 'package:organify/screens/listTugasSelesai_page.dart';
 import 'package:organify/screens/sign_page.dart';
 import 'package:organify/screens/taskCalender_page.dart';
@@ -28,6 +30,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isUpcomingExpanded = false;
   late String uid;
   int _selectedIndex = 0;
+  List<Kategori> _kategoriList = []; // Daftar kategori
+  String? _selectedKategori; // Kategori yang sedang dipilih
 
   late final VoidCallback login;
   final CatatanController _catatanController = CatatanController();
@@ -42,19 +46,19 @@ class _HomeScreenState extends State<HomeScreen> {
   get isLoggedIn => widget.isLoggedIn; // Tambahkan variabel ini
 
   @override
+  @override
   void initState() {
     super.initState();
-    login = widget.onLogin; // Inisialisasi dengan widget.onLogin
+    login = widget.onLogin;
     initializeDateFormatting('id_ID', null).then((_) {
-      // Setelah inisialisasi selesai, perbarui state jika diperlukan
       setState(() {});
     });
-    fetchData(); // Panggil fetchData saat initState
+    fetchData(); // Ambil data tugas
+    fetchKategori(); // Ambil data kategori
     final User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       uid = user.uid;
     } else {
-      // Jika pengguna belum login, arahkan ke halaman login
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacement(
           context,
@@ -62,7 +66,6 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (context) => SignPage(
               isLoggedIn: false,
               onLogin: () {
-                // Callback setelah login berhasil
                 setState(() {
                   uid = FirebaseAuth.instance.currentUser?.uid ?? '';
                 });
@@ -89,6 +92,21 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _showSearchBar = !_showSearchBar;
     });
+  }
+
+  Future<void> fetchKategori() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final kategoriController = KategoriController();
+        final data = await kategoriController.getKategori(user.uid);
+        setState(() {
+          _kategoriList = data;
+        });
+      } catch (e) {
+        print('Error fetching kategori: $e');
+      }
+    }
   }
 
   Future<void> _launchEmail() async {
@@ -155,14 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _isPreviousExpanded = !_isPreviousExpanded;
                 });
               },
-              tasks: filteredCatatans['sebelumnya']!.map((catatan) {
-                return TaskItem(
-                  taskName: catatan.namaList,
-                  deadline: DateFormat('dd-MM-yyyy').format(DateTime.parse(catatan.tanggalDeadline)),
-                  uid: uid, // Ambil UID dari catatan
-                  idCatatan: catatan.id, // Ambil ID catatan dari catatan
-                );
-              }).toList(),
+              catatans: filteredCatatans['sebelumnya']!,
             ),
             _buildSection(
               title: 'Hari Ini',
@@ -172,14 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _isTodayExpanded = !_isTodayExpanded;
                 });
               },
-              tasks: filteredCatatans['hariIni']!.map((catatan) {
-                return TaskItem(
-                  taskName: catatan.namaList,
-                  deadline: DateFormat('dd-MM-yyyy').format(DateTime.parse(catatan.tanggalDeadline)),
-                  uid: uid, // Ambil UID dari catatan
-                  idCatatan: catatan.id, // Ambil ID catatan dari catatan
-                );
-              }).toList(),
+              catatans: filteredCatatans['hariIni']!,
             ),
             _buildSection(
               title: 'Yang Akan Datang',
@@ -189,14 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _isUpcomingExpanded = !_isUpcomingExpanded;
                 });
               },
-              tasks: filteredCatatans['yangAkanDatang']!.map((catatan) {
-                return TaskItem(
-                  taskName: catatan.namaList,
-                  deadline: DateFormat('dd-MM-yyyy').format(DateTime.parse(catatan.tanggalDeadline)),
-                  uid: uid, // Ambil UID dari catatan
-                  idCatatan: catatan.id, // Ambil ID catatan dari catatan
-                );
-              }).toList(),
+              catatans: filteredCatatans['yangAkanDatang']!,
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -285,65 +282,55 @@ class _HomeScreenState extends State<HomeScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  Chip(
-                    label: Text('Semua',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.white,
-                        )),
+                  // Chip "Semua"
+                  FilterChip(
+                    label: Text(
+                      'Semua',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: Colors.white,
+                      ),
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
-                    backgroundColor: const Color(0xFF698791),
+                    selected: _selectedKategori == null, // Tandai jika tidak ada kategori yang dipilih
+                    selectedColor: const Color(0xFF698791),
+                    backgroundColor: const Color(0xFFB3C8CF),
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedKategori = null; // Reset filter
+                      });
+                    },
                   ),
                   const SizedBox(width: 12),
-                  Chip(
-                    label: Text('Pribadi',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.black,
-                        )),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    backgroundColor: const Color(0xFFB3C8CF),
-                  ),
-                  const SizedBox(width: 12),
-                  Chip(
-                    label: Text('Kerja',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.black,
-                        )),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    backgroundColor: const Color(0xFFB3C8CF),
-                  ),
-                  const SizedBox(width: 12),
-                  Chip(
-                    label: Text('Ulang Tahun',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.black,
-                        )),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    backgroundColor: const Color(0xFFB3C8CF),
-                  ),
-                  const SizedBox(width: 12),
-                  Chip(
-                    label: Text('Kuliah',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.black,
-                        )),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    backgroundColor: const Color(0xFFB3C8CF),
-                  ),
+
+                  // Chip untuk setiap kategori
+                  ..._kategoriList.map((kategori) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: FilterChip(
+                        label: Text(
+                          kategori.kategori,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: Colors.black,
+                          ),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        selected: _selectedKategori == kategori.kategori, // Tandai jika kategori dipilih
+                        selectedColor: const Color(0xFF698791),
+                        backgroundColor: const Color(0xFFB3C8CF),
+                        onSelected: (_) {
+                          setState(() {
+                            _selectedKategori = kategori.kategori; // Set filter
+                          });
+                        },
+                      ),
+                    );
+                  }).toList(),
                 ],
               ),
             ),
@@ -367,7 +354,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     value: 'search',
                     child: Container(
                       padding: EdgeInsets.zero,
-                      alignment: Alignment.center,// Padding di dalam Container diatur ke zero
+                      alignment: Alignment.center,
                       child: Text(
                         "Mencari Tugas",
                         style: GoogleFonts.poppins(
@@ -381,10 +368,10 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               color: Color(0xFFF1F0E8),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10), // Sudut melengkung
+                borderRadius: BorderRadius.circular(10),
               ),
-              padding: EdgeInsets.zero, // Padding di luar PopupMenuButton diatur ke zero
-              offset: Offset(0, 40), // Sesuaikan posisi popover jika diperlukan
+              padding: EdgeInsets.zero,
+              offset: Offset(0, 40),
             ),
           ),
         ],
@@ -443,62 +430,65 @@ class _HomeScreenState extends State<HomeScreen> {
           // Kategori dengan ExpansionTile
           ExpansionTile(
             leading: const Icon(Icons.grid_view, color: Colors.black),
-            title: Text('Kategori', style: GoogleFonts.poppins(
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
-              color: Colors.black,
-            ),),
-            trailing: const Icon(Icons.keyboard_arrow_up, color: Colors.black), // Panah ke atas/bawah
+            title: Text(
+              'Kategori',
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w400,
+                color: Colors.black,
+              ),
+            ),
+            trailing: const Icon(Icons.keyboard_arrow_up, color: Colors.black),
             children: [
+              // ListTile untuk "Semua"
               ListTile(
                 leading: const Icon(Icons.list_alt, color: Colors.black),
-                title: Text('Semua', style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),),
-                trailing: const Text('5', style: TextStyle(color: Colors.black)),
+                title: Text(
+                  'Semua',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black,
+                  ),
+                ),
+                trailing: Text(
+                  '${filteredCatatans['sebelumnya']!.length + filteredCatatans['hariIni']!.length + filteredCatatans['yangAkanDatang']!.length}',
+                  style: const TextStyle(color: Colors.black),
+                ),
                 onTap: () {
-                  // Aksi untuk "Semua"
+                  setState(() {
+                    _selectedKategori = null; // Reset filter
+                  });
+                  Navigator.pop(context); // Tutup drawer
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.person, color: Colors.black),
-                title: Text('Pribadi', style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),),
-                trailing: const Text('2', style: TextStyle(color: Colors.black)),
-                onTap: () {
-                  // Aksi untuk "Pribadi"
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.work, color: Colors.black),
-                title: Text('Kerja', style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),),
-                trailing: const Text('3', style: TextStyle(color: Colors.black)),
-                onTap: () {
-                  // Aksi untuk "Kerja"
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.cake, color: Colors.black),
-                title: Text('Ulang Tahun', style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),),
-                trailing: const Text('3', style: TextStyle(color: Colors.black)),
-                onTap: () {
-                  // Aksi untuk "Ulang Tahun"
-                },
-              ),
-              // Buat Baru
+
+              // ListTile untuk setiap kategori dari database
+              ..._kategoriList.map((kategori) {
+                return ListTile(
+                  leading: const Icon(Icons.category, color: Colors.black),
+                  title: Text(
+                    kategori.kategori,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black,
+                    ),
+                  ),
+                  trailing: Text(
+                    '${filteredCatatans['sebelumnya']!.where((catatan) => catatan.kategori == kategori.kategori).length + filteredCatatans['hariIni']!.where((catatan) => catatan.kategori == kategori.kategori).length + filteredCatatans['yangAkanDatang']!.where((catatan) => catatan.kategori == kategori.kategori).length}',
+                    style: const TextStyle(color: Colors.black),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _selectedKategori = kategori.kategori; // Set filter
+                    });
+                    Navigator.pop(context); // Tutup drawer
+                  },
+                );
+              }).toList(),
+
+              // ListTile "Buat Baru"
               ListTile(
                 leading: const Icon(Icons.add, color: Colors.black),
                 title: Text(
@@ -573,13 +563,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 TextButton(
                                   onPressed: isInputFilled
-                                      ? () {
+                                      ? () async {
                                     if (newCategory != null &&
                                         newCategory!.trim().isNotEmpty) {
-                                      print('Kategori baru: $newCategory');
-                                      // Tambahkan kategori baru ke daftar
+                                      try {
+                                        final kategoriController =
+                                        KategoriController();
+                                        await kategoriController.createKategori(
+                                            uid, newCategory!);
+                                        await fetchKategori(); // Refresh kategori
+                                        setState(() {});
+                                        Navigator.of(context).pop(); // Tutup dialog
+                                      } catch (e) {
+                                        print('Error creating kategori: $e');
+                                      }
                                     }
-                                    Navigator.of(context).pop(); // Tutup dialog
                                   }
                                       : null, // Disable jika input kosong
                                   child: Text(
@@ -602,7 +600,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          //Masukan
+
+          // Masukan
           ListTile(
             leading: const Icon(Icons.feedback, color: Colors.black),
             title: const Text('Masukan'),
@@ -617,8 +616,13 @@ class _HomeScreenState extends State<HomeScreen> {
     required String title,
     required bool isExpanded,
     required VoidCallback onTap,
-    required List<Widget> tasks,
+    required List<Catatan> catatans, // Ubah parameter menjadi List<Catatan>
   }) {
+    // Filter catatan berdasarkan kategori yang dipilih
+    List<Catatan> filteredCatatans = _selectedKategori == null
+        ? catatans // Jika tidak ada filter, tampilkan semua
+        : catatans.where((catatan) => catatan.kategori == _selectedKategori).toList();
+
     return Column(
       children: [
         ListTile(
@@ -641,7 +645,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ListView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            children: tasks,
+            children: filteredCatatans.map((catatan) {
+              return TaskItem(
+                taskName: catatan.namaList,
+                deadline: DateFormat('dd-MM-yyyy').format(DateTime.parse(catatan.tanggalDeadline)),
+                uid: uid,
+                idCatatan: catatan.id,
+              );
+            }).toList(),
           ),
       ],
     );

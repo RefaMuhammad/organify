@@ -209,7 +209,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     color: Color(0xFF222831),
                   ),
                 ),
-                Text(uid),
               ],
             ),
           ),

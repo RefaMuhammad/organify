@@ -107,7 +107,6 @@ class _TaskItemState extends State<TaskItem> {
                 ),
               ],
             ),
-            const MyButton(),
           ],
         ),
       ),
