@@ -29,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isTodayExpanded = false;
   bool _isUpcomingExpanded = false;
   late String uid;
+  String _searchQuery = '';
   int _selectedIndex = 0;
   List<Kategori> _kategoriList = []; // Daftar kategori
   String? _selectedKategori; // Kategori yang sedang dipilih
@@ -45,7 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   get isLoggedIn => widget.isLoggedIn; // Tambahkan variabel ini
 
-  @override
   @override
   void initState() {
     super.initState();
@@ -77,6 +77,24 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Fungsi untuk mengupdate query pencarian
+  void _updateSearchQuery(String query) {
+    setState(() {
+      _searchQuery = query;
+    });
+  }
+
+  // Fungsi untuk memfilter catatan berdasarkan query pencarian
+  List<Catatan> _filterCatatans(List<Catatan> catatans) {
+    if (_searchQuery.isEmpty) {
+      return catatans; // Jika query kosong, kembalikan semua catatan
+    }
+    return catatans.where((catatan) {
+      return catatan.namaList.toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+  }
+
+
   String formatTanggalRealtime(DateTime date) {
     final DateFormat formatter = DateFormat('EEEE, d MMMM', 'id_ID'); // Format: Hari, Tanggal Bulan
     return formatter.format(date);
@@ -91,6 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _toggleSearchBar() {
     setState(() {
       _showSearchBar = !_showSearchBar;
+      _searchQuery = ''; // Reset query pencarian saat search bar ditutup
     });
   }
 
@@ -251,14 +270,15 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: TextField(
                 decoration: InputDecoration(
-                    hintText: "Mencari tugas...",
-                    border: InputBorder.none, // Menghilangkan border default TextField
-                    contentPadding: EdgeInsets.symmetric(vertical: 12), // Padding vertikal
-                    hintStyle: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF222831)
-                    )
+                  hintText: "Mencari tugas...",
+                  border: InputBorder.none, // Menghilangkan border default TextField
+                  contentPadding: EdgeInsets.symmetric(vertical: 12), // Padding vertikal
+                  hintStyle: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF222831),
+                  ),
                 ),
+                onChanged: _updateSearchQuery, // Panggil fungsi saat input berubah
               ),
             ),
           ],
@@ -616,12 +636,15 @@ class _HomeScreenState extends State<HomeScreen> {
     required String title,
     required bool isExpanded,
     required VoidCallback onTap,
-    required List<Catatan> catatans, // Ubah parameter menjadi List<Catatan>
+    required List<Catatan> catatans,
   }) {
     // Filter catatan berdasarkan kategori yang dipilih
     List<Catatan> filteredCatatans = _selectedKategori == null
         ? catatans // Jika tidak ada filter, tampilkan semua
         : catatans.where((catatan) => catatan.kategori == _selectedKategori).toList();
+
+    // Filter catatan berdasarkan query pencarian
+    filteredCatatans = _filterCatatans(filteredCatatans);
 
     return Column(
       children: [

@@ -141,13 +141,21 @@ class CatatanController {
       // Konversi data ke List<Catatan>
       List<Catatan> catatans = data.map((json) => Catatan.fromJson(json)).toList();
 
-      // Filter tugas yang memiliki tanggalDeadline dalam 7 hari ke depan
-      DateTime now = DateTime.now();
+      // Filter tugas yang memiliki tanggalDeadline dalam 7 hari ke depan DAN status false (belum selesai)
+      DateTime now = DateTime.now().toUtc(); // Gunakan UTC untuk konsistensi
       DateTime sevenDaysLater = now.add(Duration(days: 7));
 
       return catatans.where((catatan) {
-        DateTime deadline = DateTime.parse(catatan.tanggalDeadline);
-        return deadline.isAfter(now) && deadline.isBefore(sevenDaysLater);
+        if (catatan.tanggalDeadline == null || catatan.status == true) {
+          return false; // Skip jika tanggalDeadline null atau status true (selesai)
+        }
+        try {
+          DateTime deadline = DateTime.parse(catatan.tanggalDeadline).toUtc();
+          return deadline.isAfter(now) && deadline.isBefore(sevenDaysLater);
+        } catch (e) {
+          print('Error parsing tanggalDeadline: ${catatan.tanggalDeadline}');
+          return false;
+        }
       }).toList();
     } else {
       throw Exception('Failed to load catatans');
@@ -257,6 +265,26 @@ class CatatanController {
       }
     } catch (e) {
       print('Error updating catatan: $e'); // Debugging
+      throw e;
+    }
+  }
+
+  Future<void> deleteAllCompletedTasks(String uid) async {
+    try {
+      // Ambil semua catatan berdasarkan UID
+      final List<Catatan> catatans = await getCatatans(uid);
+
+      // Filter catatan yang memiliki status true
+      final List<Catatan> completedTasks = catatans.where((catatan) => catatan.status == true).toList();
+
+      // Hapus setiap catatan yang memiliki status true
+      for (var catatan in completedTasks) {
+        await deleteCatatan(uid, catatan.id);
+      }
+
+      print('Semua tugas selesai berhasil dihapus'); // Debugging
+    } catch (e) {
+      print('Error deleting all completed tasks: $e'); // Debugging
       throw e;
     }
   }

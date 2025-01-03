@@ -55,6 +55,20 @@ class _TugasSelesaiPageState extends State<TugasSelesaiPage> {
     return groupedTugas;
   }
 
+  // Fungsi untuk menghapus semua tugas selesai
+  Future<void> _deleteAllCompletedTasks() async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await _catatanController.deleteAllCompletedTasks(user.uid);
+        // Setelah penghapusan, perbarui daftar tugas selesai
+        await _fetchTugasSelesai();
+      }
+    } catch (e) {
+      print('Error deleting all completed tasks: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final Map<String, List<Catatan>> groupedTugas = _groupTugasByTanggal(_tugasSelesaiList);
@@ -76,7 +90,7 @@ class _TugasSelesaiPageState extends State<TugasSelesaiPage> {
             icon: Icon(Icons.delete_outline, color: Color(0xFF222831)),
             onPressed: () {
               // Aksi ketika ikon delete ditekan
-              print('Ikon delete ditekan');
+              _deleteAllCompletedTasks();
             },
           ),
         ],
@@ -186,9 +200,6 @@ class _TugasSelesaiPageState extends State<TugasSelesaiPage> {
                         ],
                       ),
                     ),
-                    // Jarak antara teks dan ikon flag
-                    SizedBox(width: 10),
-                    // Ikon flag di sisi kanan
                   ],
                 ),
               ),
